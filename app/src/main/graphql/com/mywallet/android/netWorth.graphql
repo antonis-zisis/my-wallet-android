@@ -1,0 +1,47 @@
+query GetNetWorthSnapshots($page: Int) {
+  netWorthSnapshots(page: $page) {
+    items {
+      id
+      title
+      totalAssets
+      totalLiabilities
+      netWorth
+      createdAt
+    }
+    totalCount
+  }
+}
+
+query GetNetWorthSnapshot($id: ID!) {
+  netWorthSnapshot(id: $id) {
+    id
+    title
+    totalAssets
+    totalLiabilities
+    netWorth
+    entries {
+      id
+      type
+      label
+      amount
+      category
+    }
+    createdAt
+    updatedAt
+  }
+}
+
+mutation CreateNetWorthSnapshot($input: CreateNetWorthSnapshotInput!) {
+  createNetWorthSnapshot(input: $input) {
+    id
+    title
+    totalAssets
+    totalLiabilities
+    netWorth
+    createdAt
+  }
+}
+
+mutation DeleteNetWorthSnapshot($id: ID!) {
+  deleteNetWorthSnapshot(id: $id)
+}

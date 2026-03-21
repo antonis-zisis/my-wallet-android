@@ -1,0 +1,58 @@
+query GetSubscriptions($page: Int, $active: Boolean) {
+  subscriptions(page: $page, active: $active) {
+    items {
+      id
+      name
+      amount
+      billingCycle
+      isActive
+      startDate
+      endDate
+      monthlyCost
+      createdAt
+      updatedAt
+    }
+    totalCount
+  }
+}
+
+mutation CreateSubscription($input: CreateSubscriptionInput!) {
+  createSubscription(input: $input) {
+    id
+    name
+    amount
+    billingCycle
+    isActive
+    startDate
+    endDate
+    monthlyCost
+    createdAt
+    updatedAt
+  }
+}
+
+mutation UpdateSubscription($input: UpdateSubscriptionInput!) {
+  updateSubscription(input: $input) {
+    id
+    name
+    amount
+    billingCycle
+    isActive
+    startDate
+    endDate
+    monthlyCost
+    createdAt
+    updatedAt
+  }
+}
+
+mutation CancelSubscription($id: ID!) {
+  cancelSubscription(id: $id) {
+    id
+    isActive
+  }
+}
+
+mutation DeleteSubscription($id: ID!) {
+  deleteSubscription(id: $id)
+}

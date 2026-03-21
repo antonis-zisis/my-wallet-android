@@ -1,0 +1,31 @@
+mutation CreateTransaction($input: CreateTransactionInput!) {
+  createTransaction(input: $input) {
+    id
+    reportId
+    type
+    amount
+    description
+    category
+    date
+    createdAt
+    updatedAt
+  }
+}
+
+mutation UpdateTransaction($input: UpdateTransactionInput!) {
+  updateTransaction(input: $input) {
+    id
+    reportId
+    type
+    amount
+    description
+    category
+    date
+    createdAt
+    updatedAt
+  }
+}
+
+mutation DeleteTransaction($id: ID!) {
+  deleteTransaction(id: $id)
+}

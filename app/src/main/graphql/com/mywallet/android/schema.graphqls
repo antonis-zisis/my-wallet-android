@@ -1,0 +1,168 @@
+enum TransactionType {
+  INCOME
+  EXPENSE
+}
+
+type Query {
+  health: String!
+  reports(page: Int): ReportsResult!
+  report(id: ID!): Report
+  transactions: [Transaction!]!
+  transaction(id: ID!): Transaction
+  subscriptions(page: Int, active: Boolean): SubscriptionsResult!
+  netWorthSnapshots(page: Int): NetWorthSnapshotsResult!
+  netWorthSnapshot(id: ID!): NetWorthSnapshot
+  me: User!
+}
+
+type Mutation {
+  createReport(input: CreateReportInput!): Report!
+  updateReport(input: UpdateReportInput!): Report!
+  deleteReport(id: ID!): Boolean!
+  createTransaction(input: CreateTransactionInput!): Transaction!
+  updateTransaction(input: UpdateTransactionInput!): Transaction!
+  deleteTransaction(id: ID!): Boolean!
+  createSubscription(input: CreateSubscriptionInput!): AppSubscription!
+  updateSubscription(input: UpdateSubscriptionInput!): AppSubscription!
+  cancelSubscription(id: ID!): AppSubscription!
+  deleteSubscription(id: ID!): Boolean!
+  createNetWorthSnapshot(input: CreateNetWorthSnapshotInput!): NetWorthSnapshot!
+  deleteNetWorthSnapshot(id: ID!): Boolean!
+  updateMe(input: UpdateUserInput!): User!
+}
+
+type User {
+  id: ID!
+  email: String!
+  fullName: String
+}
+
+type Report {
+  id: ID!
+  title: String!
+  transactions: [Transaction!]!
+  createdAt: String!
+  updatedAt: String!
+}
+
+type ReportsResult {
+  items: [Report!]!
+  totalCount: Int!
+}
+
+input CreateReportInput {
+  title: String!
+}
+
+input UpdateReportInput {
+  id: ID!
+  title: String!
+}
+
+type Transaction {
+  id: ID!
+  reportId: ID!
+  type: TransactionType!
+  amount: Float!
+  description: String!
+  category: String!
+  date: String!
+  createdAt: String!
+  updatedAt: String!
+}
+
+input CreateTransactionInput {
+  reportId: ID!
+  type: TransactionType!
+  amount: Float!
+  description: String!
+  category: String!
+  date: String!
+}
+
+input UpdateTransactionInput {
+  id: ID!
+  type: TransactionType!
+  amount: Float!
+  description: String!
+  category: String!
+  date: String!
+}
+
+# Named AppSubscription to avoid conflict with GraphQL subscription root type
+type AppSubscription {
+  id: ID!
+  name: String!
+  amount: Float!
+  billingCycle: String!
+  isActive: Boolean!
+  startDate: String!
+  endDate: String
+  monthlyCost: Float!
+  createdAt: String!
+  updatedAt: String!
+}
+
+type SubscriptionsResult {
+  items: [AppSubscription!]!
+  totalCount: Int!
+}
+
+input CreateSubscriptionInput {
+  name: String!
+  amount: Float!
+  billingCycle: String!
+  startDate: String!
+  endDate: String
+}
+
+input UpdateSubscriptionInput {
+  id: ID!
+  name: String!
+  amount: Float!
+  billingCycle: String!
+  startDate: String!
+  endDate: String
+}
+
+type NetWorthSnapshot {
+  id: ID!
+  title: String!
+  totalAssets: Float!
+  totalLiabilities: Float!
+  netWorth: Float!
+  entries: [NetWorthEntry!]!
+  createdAt: String!
+  updatedAt: String!
+}
+
+type NetWorthSnapshotsResult {
+  items: [NetWorthSnapshot!]!
+  totalCount: Int!
+}
+
+type NetWorthEntry {
+  id: ID!
+  type: String!
+  label: String!
+  amount: Float!
+  category: String!
+  createdAt: String!
+  updatedAt: String!
+}
+
+input NetWorthEntryInput {
+  type: String!
+  label: String!
+  amount: Float!
+  category: String!
+}
+
+input CreateNetWorthSnapshotInput {
+  title: String!
+  entries: [NetWorthEntryInput!]!
+}
+
+input UpdateUserInput {
+  fullName: String
+}

@@ -1,0 +1,66 @@
+query GetReports($page: Int) {
+  reports(page: $page) {
+    items {
+      id
+      title
+      createdAt
+      updatedAt
+    }
+    totalCount
+  }
+}
+
+query GetReport($id: ID!) {
+  report(id: $id) {
+    id
+    title
+    createdAt
+    updatedAt
+    transactions {
+      id
+      reportId
+      type
+      amount
+      description
+      category
+      date
+      createdAt
+      updatedAt
+    }
+  }
+}
+
+query GetReportsSummary {
+  reports {
+    items {
+      id
+      title
+      transactions {
+        type
+        amount
+      }
+    }
+    totalCount
+  }
+}
+
+mutation CreateReport($input: CreateReportInput!) {
+  createReport(input: $input) {
+    id
+    title
+    createdAt
+    updatedAt
+  }
+}
+
+mutation UpdateReport($input: UpdateReportInput!) {
+  updateReport(input: $input) {
+    id
+    title
+    updatedAt
+  }
+}
+
+mutation DeleteReport($id: ID!) {
+  deleteReport(id: $id)
+}

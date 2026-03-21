@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Base theme - Compose handles the rest -->
+    <style name="Theme.MyWallet" parent="android:Theme.Material.Light.NoActionBar" />
+
+    <style name="Theme.MyWallet.SplashScreen" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_wallet</item>
+        <item name="postSplashScreenTheme">@style/Theme.MyWallet</item>
+    </style>
+</resources>
