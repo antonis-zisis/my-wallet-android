@@ -1,0 +1,14 @@
+## Copy this file to local.properties and fill in your values.
+## local.properties is gitignored and never committed.
+
+# Android SDK path in WSL
+sdk.dir=/home/your-username/android
+
+# Supabase credentials (from your Supabase project → Settings → API)
+supabase.url=https://YOUR_PROJECT_ID.supabase.co
+supabase.publishable_key=YOUR_SUPABASE_PUBLISHABLE_KEY
+
+# GraphQL backend URL
+# Emulator → host localhost:  http://10.0.2.2:4000/graphql
+# Physical device → LAN IP:   http://192.168.1.XXX:4000/graphql
+graphql.url=http://10.0.2.2:4000/graphql

@@ -36,8 +36,8 @@ android {
         )
         buildConfigField(
             "String",
-            "SUPABASE_ANON_KEY",
-            "\"${localProperties["supabase.anon_key"] ?: ""}\""
+            "SUPABASE_PUBLISHABLE_KEY",
+            "\"${localProperties["supabase.publishable_key"] ?: ""}\""
         )
         // GraphQL backend URL
         buildConfigField(
@@ -109,11 +109,8 @@ dependencies {
     // Apollo Kotlin (GraphQL)
     implementation(libs.apollo.runtime)
 
-    // Supabase
-    implementation(platform(libs.supabase.bom))
-    implementation(libs.supabase.auth)
-    implementation(libs.ktor.client.android)
-    implementation(libs.ktor.client.core)
+    // OkHttp (Supabase REST auth calls)
+    implementation(libs.okhttp)
 
     // Charts
     implementation(libs.vico.compose.m3)

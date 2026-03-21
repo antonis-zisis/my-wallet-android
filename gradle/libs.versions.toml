@@ -11,8 +11,7 @@ hilt = "2.52"
 hiltNavigation = "1.2.0"
 navigation = "2.8.5"
 apollo = "4.0.0"
-supabase = "3.0.0"
-ktor = "3.0.3"
+okhttp = "4.12.0"
 vico = "2.0.0-alpha.20"
 datastore = "1.1.1"
 splashscreen = "1.0.1"
@@ -45,13 +44,8 @@ hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navigation-com
 # Apollo Kotlin (GraphQL)
 apollo-runtime = { group = "com.apollographql.apollo", name = "apollo-runtime", version.ref = "apollo" }
 
-# Supabase Kotlin SDK
-supabase-bom = { group = "io.github.jan-tennermann", name = "supabase-bom", version.ref = "supabase" }
-supabase-auth = { group = "io.github.jan-tennermann", name = "auth-kt" }
-
-# Ktor HTTP client (required by Supabase SDK)
-ktor-client-android = { group = "io.ktor", name = "ktor-client-android", version.ref = "ktor" }
-ktor-client-core = { group = "io.ktor", name = "ktor-client-core", version.ref = "ktor" }
+# OkHttp (for Supabase REST auth — Apollo pulls it transitively, explicit for auth service)
+okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
 
 # Charts
 vico-compose-m3 = { group = "com.patrykandpatrick.vico", name = "compose-m3", version.ref = "vico" }
@@ -66,3 +60,4 @@ kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "ko
 kotlin-ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
 apollo = { id = "com.apollographql.apollo", version.ref = "apollo" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }

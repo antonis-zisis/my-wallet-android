@@ -1,19 +1,17 @@
 # My Wallet Android
 
 Android companion app for [My Wallet](../my-wallet) — a personal finance tracker. Built with Kotlin + Jetpack Compose, targeting Google Play Store.
-
+ 
 ## Tech Stack
 
-| Concern | Library |
-|---------|---------|
-| UI | Jetpack Compose + Material Design 3 |
-| Architecture | MVVM + Repository |
-| GraphQL | Apollo Kotlin 4 |
-| Authentication | Supabase Kotlin SDK |
-| Dependency Injection | Hilt |
-| Navigation | Navigation Compose (bottom nav) |
-| Charts | Vico |
-| Async | Coroutines + StateFlow |
+- **UI:** Jetpack Compose + Material Design 3
+- **Architecture:** MVVM + Repository
+- **GraphQL:** Apollo Kotlin 4
+- **Authentication:** Supabase REST API (via OkHttp — no SDK dependency)
+- **Dependency Injection:** Hilt
+- **Navigation:** Navigation Compose (bottom nav)
+- **Charts:** Vico
+- **Async:** Coroutines + StateFlow
 
 ## Features
 
@@ -28,81 +26,58 @@ Android companion app for [My Wallet](../my-wallet) — a personal finance track
 
 ---
 
-## Development Setup
+## Development Setup (WSL)
+
+The project builds and runs entirely from the WSL command line — no need to open Android Studio.
 
 ### Prerequisites
 
-- **Android Studio** (Hedgehog 2023.1.1 or newer) — installed on **Windows** (not inside WSL)
-- The `my-wallet` backend running locally (see that project's README)
+- Java 17 in WSL (`sudo apt install openjdk-17-jdk`)
+- Android SDK in WSL (with `ANDROID_HOME` set)
+- Android emulator running on Windows, or a physical device connected via USB
+- The `my-wallet` backend running locally (`pnpm dev`)
 
 ### Step 1 — Configure secrets
 
-The project's `local.properties` file already has placeholder values. Fill in your actual Supabase credentials:
+`local.properties` is gitignored. A committed template is at `local.properties.example` — copy it and fill in your values:
 
 ```properties
-supabase.url=https://YOUR_PROJECT_ID.supabase.co
-supabase.anon_key=YOUR_SUPABASE_ANON_KEY
+sdk.dir=/home/antonis/android          # path to your WSL Android SDK
 
-# Android emulator reaches your host machine at 10.0.2.2
+supabase.url=https://YOUR_PROJECT.supabase.co
+supabase.publishable_key=YOUR_SUPABASE_PUBLISHABLE_KEY
+
+# Emulator: 10.0.2.2 reaches Windows host localhost
+# Physical device: use your machine's LAN IP instead
 graphql.url=http://10.0.2.2:4000/graphql
 ```
 
-> `local.properties` is gitignored and never committed.
+### Step 2 — Build
 
-### Step 2 — Open the project in Android Studio (from WSL)
-
-Since you're on WSL2, Android Studio runs on **Windows** and accesses your WSL filesystem over the network share.
-
-**In Android Studio on Windows:**
-
-1. Go to **File → Open**
-2. In the path bar, type:
-
-   ```
-   \\wsl.localhost\Ubuntu\home\antonis\source\my-wallet-android
-   ```
-
-   (Replace `Ubuntu` with your WSL distro name if different — check with `wsl -l` in PowerShell)
-3. Click **OK** — Android Studio will detect it as a Gradle project and import it
-
-**Add the Android SDK path to `local.properties`:**
-
-Android Studio will prompt you to set the SDK location, or you can add it manually. Find your Windows SDK path (usually `C:\Users\<you>\AppData\Local\Android\Sdk`) and add:
-
-```properties
-# In local.properties — use forward slashes or escaped backslashes
-sdk.dir=C\:\\Users\\YourName\\AppData\\Local\\Android\\Sdk
+```bash
+./gradlew assembleDebug
+# APK → app/build/outputs/apk/debug/app-debug.apk
 ```
 
-Android Studio typically writes this automatically on first open.
+Apollo codegen runs automatically during the build, generating type-safe Kotlin classes from the `.graphql` files.
 
-### Step 3 — Let Apollo generate code
+### Step 3 — Run on emulator or device
 
-Apollo Kotlin reads the `.graphql` files and generates type-safe Kotlin classes. This happens automatically when Gradle syncs. You'll see the generated code under:
+Start the Android emulator on Windows (via Android Studio AVD Manager), then from WSL:
 
+```bash
+# Verify the emulator is visible
+adb devices
+
+# If nothing shows, connect to the Windows emulator from WSL2
+adb connect $(cat /etc/resolv.conf | grep nameserver | awk '{print $2}'):5554
+
+# Build then install
+./gradlew assembleDebug
+adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
-app/build/generated/source/apollo/
-```
 
-If you see "unresolved reference" errors on `GetReportsQuery`, `CreateReportMutation`, etc. — just **Build → Make Project** to trigger codegen.
-
-### Step 4 — Run the app
-
-1. Start an **Android Virtual Device** (AVD) from the Device Manager (API 26+)
-2. Start the `my-wallet` backend on your host machine (`pnpm dev` from the backend package)
-3. Press **Run** (▶) in Android Studio
-
-The emulator uses `10.0.2.2` to reach your host `localhost`, so `http://10.0.2.2:4000/graphql` connects to the local backend.
-
-**For a physical device over USB:**
-
-- Enable USB debugging on the device
-- Find your host machine's local IP (`ipconfig` on Windows or `ip addr` in WSL)
-- Update `graphql.url` in `local.properties`:
-
-  ```properties
-  graphql.url=http://192.168.1.XXX:4000/graphql
-  ```
+For a **physical device**: enable USB debugging, then `adb devices` should show it automatically. Update `graphql.url` to your machine's LAN IP.
 
 ---
 
@@ -123,16 +98,19 @@ app/src/main/
 │   ├── MainActivity.kt          # Single activity, bottom nav host
 │   │
 │   ├── di/
-│   │   ├── AppModule.kt         # Supabase client, DataStore
+│   │   ├── AppModule.kt         # OkHttpClient, DataStore
 │   │   └── NetworkModule.kt     # Apollo client + auth interceptor
 │   │
-│   ├── data/repository/
-│   │   ├── AuthRepository.kt
-│   │   ├── ReportRepository.kt
-│   │   ├── TransactionRepository.kt
-│   │   ├── SubscriptionRepository.kt
-│   │   ├── NetWorthRepository.kt
-│   │   └── UserRepository.kt
+│   ├── data/
+│   │   ├── remote/
+│   │   │   └── SupabaseAuthService.kt  # Direct Supabase REST auth calls
+│   │   └── repository/
+│   │       ├── AuthRepository.kt
+│   │       ├── ReportRepository.kt
+│   │       ├── TransactionRepository.kt
+│   │       ├── SubscriptionRepository.kt
+│   │       ├── NetWorthRepository.kt
+│   │       └── UserRepository.kt
 │   │
 │   ├── ui/
 │   │   ├── theme/               # Material 3 colors, typography, dark mode
@@ -158,53 +136,50 @@ app/src/main/
 
 ## Architecture Notes
 
-### Authentication flow
+### Authentication
 
-1. User signs in via Supabase email/password
-2. `AuthRepository` holds the Supabase session
-3. `NetworkModule`'s `AuthInterceptor` reads the session token on every Apollo request and injects `Authorization: Bearer <token>`
-4. The backend validates the JWT via Supabase admin client
+Auth is implemented via direct calls to the Supabase REST API using OkHttp (already a transitive dependency of Apollo). No Supabase SDK required.
+
+`SupabaseAuthService` handles sign-in, sign-out, and password changes. The `AuthInterceptor` in `NetworkModule` reads the in-memory session token and injects `Authorization: Bearer <token>` into every Apollo request.
 
 ### GraphQL type naming
 
-The backend uses `type Subscription` for financial subscriptions — this conflicts with GraphQL's reserved `subscription` operation root type. The local `schema.graphqls` renames it to `AppSubscription`. Apollo codegen generates `AppSubscription` types, which correctly deserialize the server's JSON response (field names are identical).
+The backend uses `type Subscription` for financial subscriptions, which conflicts with GraphQL's reserved subscription root type name. The local `schema.graphqls` renames it to `AppSubscription`. Apollo codegen generates `AppSubscription` Kotlin classes, which correctly deserialize the server's JSON responses (field names are identical).
 
 ### State management
 
-Each screen has a ViewModel exposing a single `StateFlow<UiState>` data class. Screens collect it with `collectAsState()`. No Redux/global state — all data flows through repositories.
+Each screen has a ViewModel exposing a single `StateFlow<UiState>` data class. Screens collect it with `collectAsState()`. No global state store — all data flows through repositories.
 
 ---
 
 ## Launcher Icons
 
-The project ships with a vector wallet icon (`res/drawable/ic_wallet.xml`) used as an adaptive icon placeholder. For production / Play Store:
+The project ships with a vector wallet icon (`res/drawable/ic_wallet.xml`) as an adaptive icon placeholder. For production:
 
-1. In Android Studio, right-click `res` → **New → Image Asset**
+1. In Android Studio: right-click `res` → **New → Image Asset**
 2. Choose **Launcher Icons (Adaptive and Legacy)**
-3. Use your actual app icon
-4. This generates all `mipmap-*` density variants
+3. This generates all `mipmap-*` density variants
 
 ---
 
-## Building a Release APK / AAB
+## Building for Release
 
 ```bash
-# From the project root (in Android Studio Terminal or WSL with SDK on PATH)
-./gradlew bundleRelease   # produces .aab for Play Store
-./gradlew assembleRelease # produces .apk
+./gradlew bundleRelease   # .aab for Play Store upload
+./gradlew assembleRelease # .apk for direct install
 ```
 
-You'll need a signing keystore. In Android Studio: **Build → Generate Signed Bundle/APK**.
+You'll need a signing keystore configured in `app/build.gradle.kts` or via Android Studio: **Build → Generate Signed Bundle/APK**.
 
 ---
 
 ## Environment Variables Reference
 
-All set in `local.properties` (gitignored):
+All configured in `local.properties` (gitignored):
 
 | Key | Description | Example |
 |-----|-------------|---------|
-| `sdk.dir` | Android SDK path (Windows) | `C\:\\Users\\you\\AppData\\Local\\Android\\Sdk` |
-| `supabase.url` | Your Supabase project URL | `https://xxxx.supabase.co` |
-| `supabase.anon_key` | Supabase anon/public key | `eyJhbGci...` |
-| `graphql.url` | GraphQL endpoint | `http://10.0.2.2:4000/graphql` |
+| `sdk.dir` | Android SDK path in WSL | `/home/antonis/android` |
+| `supabase.url` | Supabase project URL | `https://xxxx.supabase.co` |
+| `supabase.publishable_key` | Supabase publishable key | `sb_publishable_...` |
+| `graphql.url` | GraphQL backend endpoint | `http://10.0.2.2:4000/graphql` |
