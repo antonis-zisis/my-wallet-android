@@ -1,7 +1,10 @@
 package com.mywallet.android.ui.home
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -13,17 +16,20 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material3.Badge
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -34,19 +40,19 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.navigation.NavController
 import com.mywallet.android.graphql.GetReportsSummaryQuery
-import com.mywallet.android.ui.components.EmptyState
-import com.mywallet.android.ui.components.ErrorMessage
 import com.mywallet.android.ui.components.LoadingScreen
 import com.mywallet.android.ui.components.SectionCard
-import com.mywallet.android.ui.navigation.Screen
 import com.mywallet.android.ui.theme.ExpenseRed
 import com.mywallet.android.ui.theme.Green500
 import com.mywallet.android.ui.theme.IncomeGreen
@@ -79,20 +85,24 @@ fun HomeScreen(
                             .clip(CircleShape),
                         color = MaterialTheme.colorScheme.primaryContainer,
                     ) {
-                        if (state.userFullName != null) {
-                            Text(
-                                text = getInitials(state.userFullName),
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(8.dp),
-                                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                            )
-                        } else {
-                            Icon(
-                                Icons.Default.Person,
-                                contentDescription = "Profile",
-                                modifier = Modifier.padding(6.dp),
-                            )
+                        Box(
+                            contentAlignment = androidx.compose.ui.Alignment.Center,
+                            modifier = Modifier.fillMaxSize(),
+                        ) {
+                            if (state.userFullName != null) {
+                                Text(
+                                    text = getInitials(state.userFullName),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                )
+                            } else {
+                                Icon(
+                                    Icons.Default.Person,
+                                    contentDescription = "Profile",
+                                    modifier = Modifier.padding(6.dp),
+                                )
+                            }
                         }
                     }
                 }
@@ -116,13 +126,16 @@ fun HomeScreen(
                 HealthStatusCard(healthy = state.serverHealthy)
 
                 // Reports summary
-                val items = state.reportsSummary?.items ?: emptyList()
-                val currentReport = items.firstOrNull()
-                val previousReport = if (items.size > 1) items[1] else null
+                val reportsSummary = state.reportsSummary
+                if (reportsSummary != null) {
+                    val items = reportsSummary.items
+                    val currentReport = items.firstOrNull()
+                    val previousReport = if (items.size > 1) items[1] else null
 
-                if (currentReport != null || previousReport != null) {
                     SectionCard(title = "Reports Summary") {
+                        TotalReportsCard(totalCount = reportsSummary.totalCount)
                         if (currentReport != null) {
+                            Spacer(modifier = Modifier.height(8.dp))
                             ReportSummaryRow(
                                 label = "Current",
                                 report = currentReport,
@@ -138,12 +151,41 @@ fun HomeScreen(
                             )
                         }
                     }
+
+                    // Income & Expenses chart
+                    if (items.isNotEmpty()) {
+                        var chartExpanded by remember { mutableStateOf(false) }
+                        SectionCard(
+                            title = "Income & Expenses",
+                            trailing = {
+                                IconButton(onClick = { chartExpanded = !chartExpanded }) {
+                                    Icon(
+                                        imageVector = if (chartExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                                        contentDescription = if (chartExpanded) "Collapse" else "Expand",
+                                    )
+                                }
+                            },
+                        ) {
+                            AnimatedVisibility(visible = chartExpanded) {
+                                IncomeExpensesChart(
+                                    reports = items,
+                                    onReportClick = onNavigateToReportDetail,
+                                )
+                            }
+                        }
+                    }
                 }
 
                 // Subscriptions summary
                 val subs = state.activeSubscriptions
                 if (subs != null && subs.items.isNotEmpty()) {
                     val totalMonthly = subs.items.sumOf { it.monthlyCost }
+                    val currentIncome = state.reportsSummary?.items?.firstOrNull()
+                        ?.transactions?.filter { it.type.rawValue == "INCOME" }
+                        ?.sumOf { it.amount } ?: 0.0
+                    val percentOfIncome = if (currentIncome > 0) {
+                        "${"%.1f".format((totalMonthly / currentIncome) * 100)}%"
+                    } else "-"
                     SectionCard(title = "Subscriptions") {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -151,43 +193,64 @@ fun HomeScreen(
                         ) {
                             StatChip(label = "Active", value = "${subs.items.size}")
                             StatChip(label = "Monthly Cost", value = formatMoney(totalMonthly))
+                            StatChip(label = "% of Income", value = percentOfIncome)
                         }
                     }
 
-                    // Upcoming renewals (next 30 days)
+                    // Upcoming renewals (all future, sorted by date)
                     val upcoming = subs.items
-                        .filter { sub ->
-                            val next = getNextRenewalDate(sub.startDate, sub.billingCycle)
-                            next != null && !next.isAfter(LocalDate.now().plusDays(30))
+                        .mapNotNull { sub ->
+                            getNextRenewalDate(sub.startDate, sub.billingCycle)?.let { date -> sub to date }
                         }
-                        .sortedBy { getNextRenewalDate(it.startDate, it.billingCycle) }
+                        .sortedBy { it.second }
                         .take(5)
 
-                    if (upcoming.isNotEmpty()) {
-                        SectionCard(title = "Upcoming Renewals") {
-                            upcoming.forEach { sub ->
-                                val renewalDate = getNextRenewalDate(sub.startDate, sub.billingCycle)
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 4.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                ) {
-                                    Text(
-                                        sub.name,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                    )
-                                    Column(horizontalAlignment = Alignment.End) {
-                                        Text(
-                                            renewalDate?.toString() ?: "",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
-                                        Text(
-                                            formatMoney(sub.amount),
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.primary,
-                                        )
+                    var renewalsExpanded by remember { mutableStateOf(false) }
+                    SectionCard(
+                        title = "Upcoming Renewals",
+                        trailing = {
+                            IconButton(onClick = { renewalsExpanded = !renewalsExpanded }) {
+                                Icon(
+                                    imageVector = if (renewalsExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                                    contentDescription = if (renewalsExpanded) "Collapse" else "Expand",
+                                )
+                            }
+                        },
+                    ) {
+                        AnimatedVisibility(visible = renewalsExpanded) {
+                            if (upcoming.isEmpty()) {
+                                Text(
+                                    text = "No upcoming renewals",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            } else {
+                                Column {
+                                    upcoming.forEachIndexed { index, (sub, renewalDate) ->
+                                        if (index > 0) HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(vertical = 4.dp),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                        ) {
+                                            Text(
+                                                sub.name,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                            )
+                                            Column(horizontalAlignment = Alignment.End) {
+                                                Text(
+                                                    formatDate(renewalDate.toString()),
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                )
+                                                Text(
+                                                    formatMoney(sub.amount),
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = MaterialTheme.colorScheme.primary,
+                                                )
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -306,6 +369,30 @@ private fun HealthStatusCard(healthy: Boolean?) {
 }
 
 @Composable
+private fun TotalReportsCard(totalCount: Int) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+        ),
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Text(
+                text = "Total Reports",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "$totalCount",
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+            )
+        }
+    }
+}
+
+@Composable
 private fun ReportSummaryRow(
     label: String,
     report: GetReportsSummaryQuery.Item,
@@ -372,6 +459,103 @@ private fun ReportSummaryRow(
                         color = ExpenseRed,
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun IncomeExpensesChart(
+    reports: List<GetReportsSummaryQuery.Item>,
+    onReportClick: (String) -> Unit,
+) {
+    // Take up to 6 most recent reports, reversed to show oldest first (left to right)
+    val chartData = reports.take(6).reversed().map { report ->
+        val income = report.transactions.filter { it.type.rawValue == "INCOME" }.sumOf { it.amount }
+        val expenses = report.transactions.filter { it.type.rawValue == "EXPENSE" }.sumOf { it.amount }
+        Triple(report, income, expenses)
+    }
+
+    val maxValue = chartData.maxOfOrNull { (_, income, expenses) -> maxOf(income, expenses) }
+        ?.takeIf { it > 0 } ?: 1.0
+
+    val barMaxHeight = 140.dp
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        // Legend
+        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(10.dp)
+                        .background(IncomeGreen, RoundedCornerShape(2.dp))
+                )
+                Spacer(Modifier.width(4.dp))
+                Text("Income", style = MaterialTheme.typography.labelSmall)
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(10.dp)
+                        .background(ExpenseRed, RoundedCornerShape(2.dp))
+                )
+                Spacer(Modifier.width(4.dp))
+                Text("Expenses", style = MaterialTheme.typography.labelSmall)
+            }
+        }
+
+        // Bars
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(barMaxHeight),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.Bottom,
+        ) {
+            chartData.forEach { (report, income, expenses) ->
+                val incomeRatio = (income / maxValue).toFloat().coerceIn(0f, 1f)
+                val expensesRatio = (expenses / maxValue).toFloat().coerceIn(0f, 1f)
+
+                Row(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(barMaxHeight),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.Bottom,
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .width(12.dp)
+                            .height(barMaxHeight * incomeRatio)
+                            .background(IncomeGreen, RoundedCornerShape(topStart = 3.dp, topEnd = 3.dp))
+                            .clickable { onReportClick(report.id) }
+                    )
+                    Spacer(Modifier.width(2.dp))
+                    Box(
+                        modifier = Modifier
+                            .width(12.dp)
+                            .height(barMaxHeight * expensesRatio)
+                            .background(ExpenseRed, RoundedCornerShape(topStart = 3.dp, topEnd = 3.dp))
+                            .clickable { onReportClick(report.id) }
+                    )
+                }
+            }
+        }
+
+        // X-axis labels
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            chartData.forEach { (report, _, _) ->
+                Text(
+                    text = report.title.take(10).let { if (report.title.length > 10) "$it…" else it },
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
             }
         }
     }

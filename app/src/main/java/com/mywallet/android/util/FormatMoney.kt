@@ -3,16 +3,20 @@ package com.mywallet.android.util
 import java.text.NumberFormat
 import java.util.Locale
 
-private val currencyFormatter = NumberFormat.getCurrencyInstance(Locale.US)
-
-fun formatMoney(amount: Double): String {
-    return currencyFormatter.format(amount)
+private val formatter = NumberFormat.getNumberInstance(Locale.GERMANY).apply {
+    minimumFractionDigits = 2
+    maximumFractionDigits = 2
 }
 
-fun formatMoneyCompact(amount: Double): String {
-    return when {
-        amount >= 1_000_000 -> "${currencyFormatter.format(amount / 1_000_000)}M"
-        amount >= 1_000 -> "${currencyFormatter.format(amount / 1_000)}K"
-        else -> currencyFormatter.format(amount)
-    }
+private val compactFormatter = NumberFormat.getNumberInstance(Locale.GERMANY).apply {
+    minimumFractionDigits = 0
+    maximumFractionDigits = 1
+}
+
+fun formatMoney(amount: Double): String = "${formatter.format(amount)} €"
+
+fun formatMoneyCompact(amount: Double): String = when {
+    amount >= 1_000_000 -> "${compactFormatter.format(amount / 1_000_000)}M €"
+    amount >= 1_000 -> "${compactFormatter.format(amount / 1_000)}K €"
+    else -> formatMoney(amount)
 }

@@ -9,33 +9,34 @@ private val displayFormatter = DateTimeFormatter.ofPattern("MMM d, yyyy")
 private val shortFormatter = DateTimeFormatter.ofPattern("MMM d")
 private val inputFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
 
+/** Parses any date string the backend may send: epoch-ms, ISO timestamp, or plain date. */
+private fun parseToLocalDate(raw: String): LocalDate {
+    // Epoch milliseconds (graphql-js serializes Prisma DateTime as epoch ms string)
+    if (raw.all { it.isDigit() }) {
+        return Instant.ofEpochMilli(raw.toLong())
+            .atZone(ZoneId.systemDefault())
+            .toLocalDate()
+    }
+    return try {
+        Instant.parse(raw).atZone(ZoneId.systemDefault()).toLocalDate()
+    } catch (_: Exception) {
+        LocalDate.parse(raw.take(10))
+    }
+}
+
 fun formatDate(isoString: String): String {
     return try {
-        val instant = Instant.parse(isoString)
-        val localDate = instant.atZone(ZoneId.systemDefault()).toLocalDate()
-        localDate.format(displayFormatter)
+        parseToLocalDate(isoString).format(displayFormatter)
     } catch (e: Exception) {
-        try {
-            val localDate = LocalDate.parse(isoString.take(10))
-            localDate.format(displayFormatter)
-        } catch (e2: Exception) {
-            isoString
-        }
+        isoString
     }
 }
 
 fun formatDateShort(isoString: String): String {
     return try {
-        val instant = Instant.parse(isoString)
-        val localDate = instant.atZone(ZoneId.systemDefault()).toLocalDate()
-        localDate.format(shortFormatter)
+        parseToLocalDate(isoString).format(shortFormatter)
     } catch (e: Exception) {
-        try {
-            val localDate = LocalDate.parse(isoString.take(10))
-            localDate.format(shortFormatter)
-        } catch (e2: Exception) {
-            isoString
-        }
+        isoString
     }
 }
 
@@ -45,21 +46,14 @@ fun today(): String = LocalDate.now().toIsoString()
 
 fun getNextRenewalDate(startDate: String, billingCycle: String): LocalDate? {
     return try {
-        val start = LocalDate.parse(startDate.take(10))
+        val start = parseToLocalDate(startDate)
         val now = LocalDate.now()
-        if (billingCycle == "MONTHLY") {
-            var next = start
-            while (!next.isAfter(now)) {
-                next = next.plusMonths(1)
-            }
-            next
-        } else {
-            var next = start
-            while (!next.isAfter(now)) {
-                next = next.plusYears(1)
-            }
-            next
+        val increment = if (billingCycle == "MONTHLY") 1L else 12L
+        var next = start
+        while (!next.isAfter(now)) {
+            next = next.plusMonths(increment)
         }
+        next
     } catch (e: Exception) {
         null
     }
