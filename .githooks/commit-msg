@@ -1,0 +1,26 @@
+#!/usr/bin/env sh
+# Enforce Conventional Commits format
+# https://www.conventionalcommits.org/
+
+commit_msg=$(cat "$1")
+
+# Pattern: type(optional scope): description
+pattern='^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-zA-Z0-9_-]+\))?: .{1,100}$'
+
+if ! echo "$commit_msg" | grep -qE "$pattern"; then
+  echo ""
+  echo "✗ Invalid commit message format."
+  echo ""
+  echo "  Expected: <type>(<scope>): <description>"
+  echo ""
+  echo "  Types: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert"
+  echo ""
+  echo "  Examples:"
+  echo "    feat(auth): add biometric login"
+  echo "    fix(home): resolve loading state not clearing"
+  echo "    chore: update dependencies"
+  echo ""
+  echo "  Your message: $commit_msg"
+  echo ""
+  exit 1
+fi

@@ -100,7 +100,9 @@ fun AppNavGraph(
                     navController.navigate(Screen.Login.route) {
                         popUpTo(0) { inclusive = true }
                     }
-                }
+                },
+                isDarkTheme = isDarkTheme,
+                onToggleTheme = onToggleTheme,
             )
         }
     }

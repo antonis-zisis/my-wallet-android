@@ -57,7 +57,8 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         setContent {
-            var isDarkTheme by remember { mutableStateOf(false) }
+            val systemDark = isSystemInDarkTheme()
+            var isDarkTheme by remember { mutableStateOf(systemDark) }
             MyWalletTheme(darkTheme = isDarkTheme) {
                 MyWalletApp(
                     isDarkTheme = isDarkTheme,

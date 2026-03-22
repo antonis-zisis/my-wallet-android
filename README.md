@@ -30,6 +30,14 @@ An Android application to help with budgeting built with. Built with Kotlin + Je
 
 The project builds and runs entirely from the WSL command line.
 
+### First-time setup
+
+After cloning, activate the git hooks (conventional commits enforcement):
+
+```bash
+git config core.hooksPath .githooks
+```
+
 ### Prerequisites
 
 - Java 17 in WSL (`sudo apt install openjdk-17-jdk`)
