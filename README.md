@@ -1,7 +1,7 @@
-# My Wallet Android
+# My Wallet - Android
 
-Android companion app for [My Wallet](../my-wallet) — a personal finance tracker. Built with Kotlin + Jetpack Compose, targeting Google Play Store.
- 
+An Android application to help with budgeting built with. Built with Kotlin + Jetpack Compose, targeting Google Play Store.
+
 ## Tech Stack
 
 - **UI:** Jetpack Compose + Material Design 3
@@ -9,7 +9,7 @@ Android companion app for [My Wallet](../my-wallet) — a personal finance track
 - **GraphQL:** Apollo Kotlin 4
 - **Authentication:** Supabase REST API (via OkHttp — no SDK dependency)
 - **Dependency Injection:** Hilt
-- **Navigation:** Navigation Compose (bottom nav)
+- **Navigation:** Navigation Compose
 - **Charts:** Vico
 - **Async:** Coroutines + StateFlow
 
@@ -28,21 +28,22 @@ Android companion app for [My Wallet](../my-wallet) — a personal finance track
 
 ## Development Setup (WSL)
 
-The project builds and runs entirely from the WSL command line — no need to open Android Studio.
+The project builds and runs entirely from the WSL command line.
 
 ### Prerequisites
 
 - Java 17 in WSL (`sudo apt install openjdk-17-jdk`)
 - Android SDK in WSL (with `ANDROID_HOME` set)
 - Android emulator running on Windows, or a physical device connected via USB
-- The `my-wallet` backend running locally (`pnpm dev`)
+- The `my-wallet` backend running locally (`pnpm dev:backend`)
 
 ### Step 1 — Configure secrets
 
 `local.properties` is gitignored. A committed template is at `local.properties.example` — copy it and fill in your values:
 
 ```properties
-sdk.dir=/home/antonis/android          # path to your WSL Android SDK
+# path to your WSL Android SDK
+sdk.dir=/home/antonis/android
 
 supabase.url=https://YOUR_PROJECT.supabase.co
 supabase.publishable_key=YOUR_SUPABASE_PUBLISHABLE_KEY
@@ -83,7 +84,7 @@ For a **physical device**: enable USB debugging, then `adb devices` should show 
 
 ## Project Structure
 
-```
+```text
 app/src/main/
 ├── graphql/com/mywallet/android/
 │   ├── schema.graphqls          # Server schema (used by Apollo codegen)
@@ -177,9 +178,9 @@ You'll need a signing keystore configured in `app/build.gradle.kts` or via Andro
 
 All configured in `local.properties` (gitignored):
 
-| Key | Description | Example |
-|-----|-------------|---------|
-| `sdk.dir` | Android SDK path in WSL | `/home/antonis/android` |
-| `supabase.url` | Supabase project URL | `https://xxxx.supabase.co` |
-| `supabase.publishable_key` | Supabase publishable key | `sb_publishable_...` |
-| `graphql.url` | GraphQL backend endpoint | `http://10.0.2.2:4000/graphql` |
+| Key                        | Description              | Example                        |
+|----------------------------|--------------------------|--------------------------------|
+| `sdk.dir`                  | Android SDK path in WSL  | `/home/antonis/android`        |
+| `supabase.url`             | Supabase project URL     | `https://xxxx.supabase.co`     |
+| `supabase.publishable_key` | Supabase publishable key | `sb_publishable_...`           |
+| `graphql.url`              | GraphQL backend endpoint | `http://10.0.2.2:4000/graphql` |
