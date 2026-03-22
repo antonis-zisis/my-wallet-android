@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="splash_background">#1E3A5F</color>
+    <!-- Matches LightBackground (Gray50) — shown by the window before Compose draws -->
+    <color name="app_background">#F9FAFB</color>
 </resources>

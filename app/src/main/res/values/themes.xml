@@ -1,7 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Base theme - Compose handles the rest -->
-    <style name="Theme.MyWallet" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.MyWallet" parent="android:Theme.Material.Light.NoActionBar">
+        <!-- Prevents black flash between splash exit and Compose first frame -->
+        <item name="android:windowBackground">@color/app_background</item>
+    </style>
 
     <style name="Theme.MyWallet.SplashScreen" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">@color/splash_background</item>
