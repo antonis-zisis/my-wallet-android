@@ -59,7 +59,7 @@ fun ReportsScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
+                .padding(top = padding.calculateTopPadding())
         ) {
             when {
                 state.isLoading -> LoadingScreen()
