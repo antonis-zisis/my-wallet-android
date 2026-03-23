@@ -182,7 +182,7 @@ private fun SnapshotListItem(
             }
         },
         trailingContent = {
-            Row {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = onDelete) {
                     Icon(
                         Icons.Default.Delete,
