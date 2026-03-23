@@ -9,6 +9,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import com.mywallet.android.util.toInputDate
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import javax.inject.Inject
@@ -94,8 +95,8 @@ class SubscriptionsViewModel @Inject constructor(
                 name = sub.name,
                 amount = sub.amount.toString(),
                 billingCycle = sub.billingCycle,
-                startDate = sub.startDate.take(10),
-                endDate = sub.endDate?.take(10) ?: "",
+                startDate = toInputDate(sub.startDate),
+                endDate = sub.endDate?.let { toInputDate(it) } ?: "",
             ),
         )
     }
