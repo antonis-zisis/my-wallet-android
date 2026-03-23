@@ -10,6 +10,8 @@ class AuthRepository @Inject constructor(
 ) {
     fun isLoggedIn(): Boolean = authService.isLoggedIn()
 
+    suspend fun tryRestoreSession(): Boolean = authService.tryRestoreSession()
+
     suspend fun signIn(email: String, password: String): Result<Unit> =
         authService.signIn(email, password).map { }
 

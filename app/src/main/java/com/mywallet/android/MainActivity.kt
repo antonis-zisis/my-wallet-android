@@ -26,6 +26,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
@@ -38,6 +40,7 @@ import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.mywallet.android.data.repository.AuthRepository
 import com.mywallet.android.ui.navigation.AppNavGraph
 import com.mywallet.android.ui.navigation.Screen
 import com.mywallet.android.ui.theme.MyWalletTheme
@@ -59,13 +62,27 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var dataStore: DataStore<Preferences>
 
+    @Inject
+    lateinit var authRepository: AuthRepository
+
     override fun onCreate(savedInstanceState: Bundle?) {
-        installSplashScreen()
+        val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
         val systemDarkTheme = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
                 Configuration.UI_MODE_NIGHT_YES
+
+        var authChecked by mutableStateOf(false)
+        var startDestination by mutableStateOf(Screen.Login.route)
+
+        splashScreen.setKeepOnScreenCondition { !authChecked }
+
+        lifecycleScope.launch {
+            val restored = authRepository.tryRestoreSession()
+            startDestination = if (restored) Screen.Home.route else Screen.Login.route
+            authChecked = true
+        }
 
         setContent {
             val preferences by dataStore.data.collectAsState(initial = null)
@@ -79,14 +96,17 @@ class MainActivity : ComponentActivity() {
             }
 
             MyWalletTheme(darkTheme = isDarkTheme) {
-                MyWalletApp(
-                    themeMode = themeMode,
-                    onThemeModeChange = { mode ->
-                        lifecycleScope.launch {
-                            dataStore.edit { it[THEME_MODE_KEY] = mode.name }
-                        }
-                    },
-                )
+                if (authChecked) {
+                    MyWalletApp(
+                        startDestination = startDestination,
+                        themeMode = themeMode,
+                        onThemeModeChange = { mode ->
+                            lifecycleScope.launch {
+                                dataStore.edit { it[THEME_MODE_KEY] = mode.name }
+                            }
+                        },
+                    )
+                }
             }
         }
     }
@@ -98,6 +118,7 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun MyWalletApp(
+    startDestination: String,
     themeMode: ThemeMode,
     onThemeModeChange: (ThemeMode) -> Unit,
 ) {
@@ -169,7 +190,7 @@ fun MyWalletApp(
     ) { innerPadding ->
         AppNavGraph(
             navController = navController,
-            startDestination = Screen.Login.route,
+            startDestination = startDestination,
             modifier = Modifier.padding(innerPadding).consumeWindowInsets(innerPadding),
             themeMode = themeMode,
             onThemeModeChange = onThemeModeChange,

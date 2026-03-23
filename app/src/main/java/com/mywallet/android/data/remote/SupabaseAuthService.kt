@@ -1,7 +1,12 @@
 package com.mywallet.android.data.remote
 
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
 import com.mywallet.android.BuildConfig
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -20,6 +25,7 @@ data class AuthSession(
 @Singleton
 class SupabaseAuthService @Inject constructor(
     private val okHttpClient: OkHttpClient,
+    private val dataStore: DataStore<Preferences>,
 ) {
     private val baseUrl = BuildConfig.SUPABASE_URL
     private val apiKey = BuildConfig.SUPABASE_PUBLISHABLE_KEY
@@ -61,6 +67,7 @@ class SupabaseAuthService @Inject constructor(
                     userEmail = json.optJSONObject("user")?.optString("email"),
                 )
                 currentSession = session
+                saveSession(session)
                 Result.success(session)
             } catch (e: Exception) {
                 Result.failure(e)
@@ -81,12 +88,68 @@ class SupabaseAuthService @Inject constructor(
                 okHttpClient.newCall(request).execute().close()
             }
             currentSession = null
+            clearPersistedSession()
             Result.success(Unit)
         } catch (e: Exception) {
             currentSession = null
+            clearPersistedSession()
             Result.success(Unit) // sign out locally even if network fails
         }
     }
+
+    suspend fun tryRestoreSession(): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val prefs = dataStore.data.first()
+            val refreshToken = prefs[REFRESH_TOKEN_KEY] ?: return@withContext false
+            refreshSession(refreshToken).fold(
+                onSuccess = { session ->
+                    currentSession = session
+                    saveSession(session)
+                    true
+                },
+                onFailure = {
+                    clearPersistedSession()
+                    false
+                }
+            )
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    private suspend fun refreshSession(refreshToken: String): Result<AuthSession> =
+        withContext(Dispatchers.IO) {
+            try {
+                val body = JSONObject().apply {
+                    put("refresh_token", refreshToken)
+                }.toString().toRequestBody(jsonMediaType)
+
+                val request = Request.Builder()
+                    .url("$baseUrl/auth/v1/token?grant_type=refresh_token")
+                    .post(body)
+                    .addHeader("apikey", apiKey)
+                    .addHeader("Content-Type", "application/json")
+                    .build()
+
+                val response = okHttpClient.newCall(request).execute()
+                val responseBody = response.body?.string() ?: ""
+
+                if (!response.isSuccessful) {
+                    return@withContext Result.failure(Exception("Token refresh failed (${response.code})"))
+                }
+
+                val json = JSONObject(responseBody)
+                Result.success(
+                    AuthSession(
+                        accessToken = json.getString("access_token"),
+                        refreshToken = json.getString("refresh_token"),
+                        userEmail = json.optJSONObject("user")?.optString("email"),
+                    )
+                )
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
 
     suspend fun updatePassword(newPassword: String): Result<Unit> = withContext(Dispatchers.IO) {
         val token = currentSession?.accessToken
@@ -120,4 +183,26 @@ class SupabaseAuthService @Inject constructor(
 
     fun isLoggedIn(): Boolean = currentSession != null
     fun currentUserEmail(): String? = currentSession?.userEmail
+
+    private suspend fun saveSession(session: AuthSession) {
+        dataStore.edit { prefs ->
+            prefs[ACCESS_TOKEN_KEY] = session.accessToken
+            prefs[REFRESH_TOKEN_KEY] = session.refreshToken
+            session.userEmail?.let { prefs[EMAIL_KEY] = it }
+        }
+    }
+
+    private suspend fun clearPersistedSession() {
+        dataStore.edit { prefs ->
+            prefs.remove(ACCESS_TOKEN_KEY)
+            prefs.remove(REFRESH_TOKEN_KEY)
+            prefs.remove(EMAIL_KEY)
+        }
+    }
+
+    companion object {
+        val ACCESS_TOKEN_KEY = stringPreferencesKey("auth_access_token")
+        val REFRESH_TOKEN_KEY = stringPreferencesKey("auth_refresh_token")
+        val EMAIL_KEY = stringPreferencesKey("auth_email")
+    }
 }
