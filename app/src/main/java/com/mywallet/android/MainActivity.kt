@@ -26,12 +26,14 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -39,7 +41,10 @@ import androidx.navigation.compose.rememberNavController
 import com.mywallet.android.ui.navigation.AppNavGraph
 import com.mywallet.android.ui.navigation.Screen
 import com.mywallet.android.ui.theme.MyWalletTheme
+import com.mywallet.android.ui.theme.ThemeMode
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 data class BottomNavItem(
     val route: String,
@@ -51,32 +56,50 @@ data class BottomNavItem(
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
+    @Inject
+    lateinit var dataStore: DataStore<Preferences>
+
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // Read dark mode from Activity resources — guaranteed correct after super.onCreate(),
-        // avoids LocalConfiguration subscription that can delay Compose's first frame.
-        val initialDarkTheme = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
+        val systemDarkTheme = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
                 Configuration.UI_MODE_NIGHT_YES
 
         setContent {
-            var isDarkTheme by remember { mutableStateOf(initialDarkTheme) }
+            val preferences by dataStore.data.collectAsState(initial = null)
+            val themeMode = preferences?.get(THEME_MODE_KEY)
+                ?.let { runCatching { ThemeMode.valueOf(it) }.getOrNull() }
+                ?: ThemeMode.SYSTEM
+            val isDarkTheme = when (themeMode) {
+                ThemeMode.SYSTEM -> systemDarkTheme
+                ThemeMode.DARK -> true
+                ThemeMode.LIGHT -> false
+            }
+
             MyWalletTheme(darkTheme = isDarkTheme) {
                 MyWalletApp(
-                    isDarkTheme = isDarkTheme,
-                    onToggleTheme = { isDarkTheme = !isDarkTheme },
+                    themeMode = themeMode,
+                    onThemeModeChange = { mode ->
+                        lifecycleScope.launch {
+                            dataStore.edit { it[THEME_MODE_KEY] = mode.name }
+                        }
+                    },
                 )
             }
         }
+    }
+
+    companion object {
+        val THEME_MODE_KEY = stringPreferencesKey("theme_mode")
     }
 }
 
 @Composable
 fun MyWalletApp(
-    isDarkTheme: Boolean,
-    onToggleTheme: () -> Unit,
+    themeMode: ThemeMode,
+    onThemeModeChange: (ThemeMode) -> Unit,
 ) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -148,8 +171,8 @@ fun MyWalletApp(
             navController = navController,
             startDestination = Screen.Login.route,
             modifier = Modifier.padding(innerPadding).consumeWindowInsets(innerPadding),
-            isDarkTheme = isDarkTheme,
-            onToggleTheme = onToggleTheme,
+            themeMode = themeMode,
+            onThemeModeChange = onThemeModeChange,
         )
     }
 }

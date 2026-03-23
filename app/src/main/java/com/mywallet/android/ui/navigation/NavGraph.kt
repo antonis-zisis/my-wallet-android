@@ -14,14 +14,15 @@ import com.mywallet.android.ui.profile.ProfileScreen
 import com.mywallet.android.ui.reports.ReportDetailScreen
 import com.mywallet.android.ui.reports.ReportsScreen
 import com.mywallet.android.ui.subscriptions.SubscriptionsScreen
+import com.mywallet.android.ui.theme.ThemeMode
 
 @Composable
 fun AppNavGraph(
     navController: NavHostController,
     startDestination: String,
     modifier: androidx.compose.ui.Modifier = androidx.compose.ui.Modifier,
-    isDarkTheme: Boolean = false,
-    onToggleTheme: () -> Unit = {},
+    themeMode: ThemeMode = ThemeMode.SYSTEM,
+    onThemeModeChange: (ThemeMode) -> Unit = {},
 ) {
     NavHost(
         navController = navController,
@@ -101,8 +102,8 @@ fun AppNavGraph(
                         popUpTo(0) { inclusive = true }
                     }
                 },
-                isDarkTheme = isDarkTheme,
-                onToggleTheme = onToggleTheme,
+                themeMode = themeMode,
+                onThemeModeChange = onThemeModeChange,
             )
         }
     }
