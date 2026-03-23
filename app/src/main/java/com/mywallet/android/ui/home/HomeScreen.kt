@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -25,7 +24,6 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -33,7 +31,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -60,7 +57,6 @@ import com.mywallet.android.ui.theme.NetWorthNegative
 import com.mywallet.android.ui.theme.NetWorthPositive
 import com.mywallet.android.util.formatDate
 import com.mywallet.android.util.formatMoney
-import com.mywallet.android.util.getInitials
 import com.mywallet.android.util.getNextRenewalDate
 import java.time.LocalDate
 
@@ -70,43 +66,12 @@ fun HomeScreen(
     onNavigateToReportDetail: (String) -> Unit,
     onNavigateToNetWorthDetail: (String) -> Unit,
     viewModel: HomeViewModel = hiltViewModel(),
-    onNavigateToProfile: () -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsState()
 
     Column(modifier = Modifier.fillMaxSize()) {
         TopAppBar(
             title = { Text("Dashboard") },
-            actions = {
-                IconButton(onClick = onNavigateToProfile) {
-                    Surface(
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(CircleShape),
-                        color = MaterialTheme.colorScheme.primaryContainer,
-                    ) {
-                        Box(
-                            contentAlignment = androidx.compose.ui.Alignment.Center,
-                            modifier = Modifier.fillMaxSize(),
-                        ) {
-                            if (state.userFullName != null) {
-                                Text(
-                                    text = getInitials(state.userFullName),
-                                    style = MaterialTheme.typography.labelMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                )
-                            } else {
-                                Icon(
-                                    Icons.Default.Person,
-                                    contentDescription = "Profile",
-                                    modifier = Modifier.padding(6.dp),
-                                )
-                            }
-                        }
-                    }
-                }
-            },
             colors = TopAppBarDefaults.topAppBarColors(
                 containerColor = MaterialTheme.colorScheme.surface,
             )

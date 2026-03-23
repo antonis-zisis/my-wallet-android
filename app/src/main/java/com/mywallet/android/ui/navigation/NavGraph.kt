@@ -47,9 +47,6 @@ fun AppNavGraph(
                 onNavigateToNetWorthDetail = { snapshotId ->
                     navController.navigate(Screen.NetWorthDetail.createRoute(snapshotId))
                 },
-                onNavigateToProfile = {
-                    navController.navigate(Screen.Profile.route)
-                },
             )
         }
 
