@@ -10,6 +10,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import com.mywallet.android.util.toInputDate
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import javax.inject.Inject
@@ -139,7 +140,7 @@ class ReportDetailViewModel @Inject constructor(
                 amount = tx.amount.toString(),
                 description = tx.description,
                 category = tx.category,
-                date = tx.date.take(10),
+                date = toInputDate(tx.date),
             ),
         )
     }

@@ -27,8 +27,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -45,6 +48,15 @@ fun ReportsScreen(
     viewModel: ReportsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+
+    LaunchedEffect(lifecycle) {
+        lifecycle.currentStateFlow.collect { lifecycleState ->
+            if (lifecycleState == Lifecycle.State.RESUMED) {
+                viewModel.loadReports(state.currentPage)
+            }
+        }
+    }
 
     Scaffold(
         topBar = {

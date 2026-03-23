@@ -42,6 +42,13 @@ fun formatDateShort(isoString: String): String {
 
 fun LocalDate.toIsoString(): String = this.format(inputFormatter)
 
+/** Converts any backend date (epoch-ms, ISO timestamp, or plain date) to yyyy-MM-dd. */
+fun toInputDate(raw: String): String = try {
+    parseToLocalDate(raw).format(inputFormatter)
+} catch (_: Exception) {
+    raw
+}
+
 fun today(): String = LocalDate.now().toIsoString()
 
 fun getNextRenewalDate(startDate: String, billingCycle: String): LocalDate? {
