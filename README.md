@@ -22,7 +22,7 @@ An Android application to help with budgeting built with. Built with Kotlin + Je
 - **Net Worth** — snapshot list, create snapshots with asset/liability entries, detail view
 - **Profile** — edit full name, change password, sign out
 - **Auth** — Supabase email/password login
-- **Theme** — light/dark mode toggle
+- **Theme** — System / Light / Dark selection (persisted across launches)
 
 ---
 
@@ -86,7 +86,7 @@ adb connect $(cat /etc/resolv.conf | grep nameserver | awk '{print $2}'):5554
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
-For a **physical device**: enable USB debugging, then `adb devices` should show it automatically. Update `graphql.url` to your machine's LAN IP.
+For a **physical device**: enable USB debugging, then `adb devices` should show it automatically. Update `graphql.url` to your machine's LAN IP (find it with `ipconfig` in PowerShell — IPv4 under the WiFi adapter). If the device can't reach the backend, add an inbound rule in Windows Defender Firewall for TCP port 4000.
 
 ---
 
@@ -149,7 +149,7 @@ app/src/main/
 
 Auth is implemented via direct calls to the Supabase REST API using OkHttp (already a transitive dependency of Apollo). No Supabase SDK required.
 
-`SupabaseAuthService` handles sign-in, sign-out, and password changes. The `AuthInterceptor` in `NetworkModule` reads the in-memory session token and injects `Authorization: Bearer <token>` into every Apollo request.
+`SupabaseAuthService` handles sign-in, sign-out, and password changes. After a successful sign-in the access and refresh tokens are persisted to DataStore. On the next launch `tryRestoreSession()` exchanges the stored refresh token for a new access token via Supabase's refresh endpoint — if it succeeds the app starts directly on the Home screen, skipping the Login screen. Signing out clears the stored tokens. The `AuthInterceptor` in `NetworkModule` reads the current in-memory session token and injects `Authorization: Bearer <token>` into every Apollo request.
 
 ### GraphQL type naming
 

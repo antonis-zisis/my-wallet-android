@@ -28,13 +28,15 @@ The backend (`../my-wallet/packages/backend`) must be running locally. The emula
 - **Single Activity** — `MainActivity` hosts a `NavHost` with a bottom navigation bar
 - **Hilt** for DI — all repositories, services, and the Apollo client are `@Singleton` provided via `AppModule` / `NetworkModule`
 - **Apollo Kotlin 4** — GraphQL queries/mutations in `src/main/graphql/`; codegen runs automatically on build
-- **Auth** — `SupabaseAuthService` calls the Supabase REST API directly (no SDK); the `AuthInterceptor` injects the Bearer token into every Apollo request
+- **Auth** — `SupabaseAuthService` calls the Supabase REST API directly (no SDK); tokens are persisted to DataStore after login and restored via `tryRestoreSession()` (refresh-token exchange) on startup — successful restore skips the Login screen; the `AuthInterceptor` injects the Bearer token into every Apollo request
 
 ## Key Conventions
 
 - UI state is a single immutable data class exposed as `StateFlow` from each ViewModel
 - All network calls return `Result<T>` and are handled with `.fold(onSuccess, onFailure)`
 - Dialogs (create, edit, delete confirmations) are driven by state fields in the ViewModel, not local composable state
+- Theme is a three-way `ThemeMode` enum (`SYSTEM`/`LIGHT`/`DARK`) stored in DataStore; `SYSTEM` follows the device setting
+- Profile is a top-level bottom nav destination (not navigated to from HomeScreen)
 - Date strings from the API are ISO-8601; use `formatDate()` / `formatDateShort()` from `util/FormatDate.kt`
 - Money formatting goes through `formatMoney()` from `util/FormatMoney.kt`
 
