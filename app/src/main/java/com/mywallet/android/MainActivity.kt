@@ -143,7 +143,7 @@ fun MyWalletApp(
         ),
         BottomNavItem(
             route = Screen.Subscriptions.route,
-            label = "Subscriptions",
+            label = "Subs",
             selectedIcon = Icons.Filled.CreditCard,
             unselectedIcon = Icons.Outlined.CreditCard,
         ),

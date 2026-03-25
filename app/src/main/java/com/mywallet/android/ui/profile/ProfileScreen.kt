@@ -3,6 +3,7 @@ package com.mywallet.android.ui.profile
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -61,7 +62,8 @@ fun ProfileScreen(
     Scaffold(
         topBar = {
             TopAppBar(title = { Text("Profile") })
-        }
+        },
+        contentWindowInsets = WindowInsets(0),
     ) { padding ->
         if (state.isLoading) {
             LoadingScreen()
