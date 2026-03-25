@@ -59,7 +59,9 @@ supabase.publishable_key=YOUR_SUPABASE_PUBLISHABLE_KEY
 # Emulator: 10.0.2.2 reaches Windows host localhost
 graphql.url=http://10.0.2.2:4000/graphql
 # Physical device: use your machine's LAN IP instead
-graphql.url=http://192.168.1.42:4000/graphql
+# graphql.url=http://192.168.1.42:4000/graphql
+# Production (Cloud Run):
+# graphql.url=https://your-service.europe-west1.run.app/graphql
 ```
 
 ### Step 2 — Build
@@ -174,12 +176,40 @@ The project ships with a vector wallet icon (`res/drawable/ic_wallet.xml`) as an
 
 ## Building for Release
 
+### 1 — Set the production backend URL
+
+In `local.properties`, point `graphql.url` at the deployed backend (Cloud Run is already HTTPS):
+
+```properties
+graphql.url=https://your-service.europe-west1.run.app/graphql
+```
+
+### 2 — Create a release signing keystore (one-time)
+
+```bash
+keytool -genkey -v -keystore my-wallet-release.jks \
+  -alias my-wallet -keyalg RSA -keysize 2048 -validity 10000
+```
+
+Store the `.jks` file **outside the repo** and back it up — losing it means you can never update the app on the Play Store. The file is gitignored (`*.jks`).
+
+Add the signing credentials to `local.properties`:
+
+```properties
+signing.storeFile=/absolute/path/to/my-wallet-release.jks
+signing.storePassword=your_store_password
+signing.keyAlias=my-wallet
+signing.keyPassword=your_key_password
+```
+
+### 3 — Build the release bundle
+
 ```bash
 ./gradlew bundleRelease   # .aab for Play Store upload
 ./gradlew assembleRelease # .apk for direct install
 ```
 
-You'll need a signing keystore configured in `app/build.gradle.kts` or via Android Studio: **Build → Generate Signed Bundle/APK**.
+Output: `app/build/outputs/bundle/release/app-release.aab`
 
 ---
 
@@ -187,9 +217,13 @@ You'll need a signing keystore configured in `app/build.gradle.kts` or via Andro
 
 All configured in `local.properties` (gitignored):
 
-| Key                        | Description              | Example                        |
-|----------------------------|--------------------------|--------------------------------|
-| `sdk.dir`                  | Android SDK path in WSL  | `/home/antonis/android`        |
-| `supabase.url`             | Supabase project URL     | `https://xxxx.supabase.co`     |
-| `supabase.publishable_key` | Supabase publishable key | `sb_publishable_...`           |
-| `graphql.url`              | GraphQL backend endpoint | `http://10.0.2.2:4000/graphql` |
+| Key                        | Description                              | Example                                          |
+|----------------------------|------------------------------------------|--------------------------------------------------|
+| `sdk.dir`                  | Android SDK path in WSL                  | `/home/antonis/android`                          |
+| `supabase.url`             | Supabase project URL                     | `https://xxxx.supabase.co`                       |
+| `supabase.publishable_key` | Supabase publishable key                 | `sb_publishable_...`                             |
+| `graphql.url`              | GraphQL backend endpoint                 | `http://10.0.2.2:4000/graphql`                   |
+| `signing.storeFile`        | Absolute path to release `.jks` keystore | `/home/antonis/keys/my-wallet-release.jks`       |
+| `signing.storePassword`    | Keystore password                        | —                                                |
+| `signing.keyAlias`         | Key alias used when creating the store   | `my-wallet`                                      |
+| `signing.keyPassword`      | Key password                             | —                                                |
