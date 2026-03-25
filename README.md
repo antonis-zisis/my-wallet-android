@@ -57,8 +57,9 @@ supabase.url=https://YOUR_PROJECT.supabase.co
 supabase.publishable_key=YOUR_SUPABASE_PUBLISHABLE_KEY
 
 # Emulator: 10.0.2.2 reaches Windows host localhost
-# Physical device: use your machine's LAN IP instead
 graphql.url=http://10.0.2.2:4000/graphql
+# Physical device: use your machine's LAN IP instead
+graphql.url=http://192.168.1.42:4000/graphql
 ```
 
 ### Step 2 — Build
