@@ -9,6 +9,17 @@ supabase.url=https://YOUR_PROJECT_ID.supabase.co
 supabase.publishable_key=YOUR_SUPABASE_PUBLISHABLE_KEY
 
 # GraphQL backend URL
-# Emulator → host localhost:  http://10.0.2.2:4000/graphql
-# Physical device → LAN IP:   http://192.168.1.XXX:4000/graphql
+# Development — emulator reaches Windows host via 10.0.2.2
 graphql.url=http://10.0.2.2:4000/graphql
+# Development — physical device: use your machine's LAN IP
+# graphql.url=http://192.168.1.XXX:4000/graphql
+# Production — Cloud Run (or other deployed backend)
+# graphql.url=https://your-service.europe-west1.run.app/graphql
+
+# Release signing (only needed for release builds — store .jks outside the repo)
+# Generate with:
+#   keytool -genkey -v -keystore my-wallet-release.jks -alias my-wallet -keyalg RSA -keysize 2048 -validity 10000
+signing.storeFile=/absolute/path/to/my-wallet-release.jks
+signing.storePassword=YOUR_STORE_PASSWORD
+signing.keyAlias=my-wallet
+signing.keyPassword=YOUR_KEY_PASSWORD
