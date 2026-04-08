@@ -1,6 +1,11 @@
 package com.mywallet.android.ui.home
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -15,13 +20,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Card
@@ -42,7 +46,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -58,7 +64,6 @@ import com.mywallet.android.ui.theme.NetWorthPositive
 import com.mywallet.android.util.formatDate
 import com.mywallet.android.util.formatMoney
 import com.mywallet.android.util.getNextRenewalDate
-import java.time.LocalDate
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -72,6 +77,10 @@ fun HomeScreen(
     Column(modifier = Modifier.fillMaxSize()) {
         TopAppBar(
             title = { Text("Dashboard") },
+            actions = {
+                HealthStatusDot(healthy = state.serverHealthy)
+                Spacer(modifier = Modifier.width(12.dp))
+            },
             colors = TopAppBarDefaults.topAppBarColors(
                 containerColor = MaterialTheme.colorScheme.surface,
             )
@@ -87,34 +96,27 @@ fun HomeScreen(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                // Server health status
-                HealthStatusCard(healthy = state.serverHealthy)
-
-                // Reports summary
+                // Reports section
                 val reportsSummary = state.reportsSummary
                 if (reportsSummary != null) {
                     val items = reportsSummary.items
                     val currentReport = items.firstOrNull()
                     val previousReport = if (items.size > 1) items[1] else null
 
-                    SectionCard(title = "Reports Summary") {
-                        TotalReportsCard(totalCount = reportsSummary.totalCount)
-                        if (currentReport != null) {
-                            Spacer(modifier = Modifier.height(8.dp))
-                            ReportSummaryRow(
-                                label = "Current",
-                                report = currentReport,
-                                onClick = { onNavigateToReportDetail(currentReport.id) },
-                            )
-                        }
-                        if (previousReport != null) {
-                            Spacer(modifier = Modifier.height(8.dp))
-                            ReportSummaryRow(
-                                label = "Previous",
-                                report = previousReport,
-                                onClick = { onNavigateToReportDetail(previousReport.id) },
-                            )
-                        }
+                    TotalReportsCard(totalCount = reportsSummary.totalCount)
+                    if (currentReport != null) {
+                        ReportSummaryRow(
+                            label = "Current",
+                            report = currentReport,
+                            onClick = { onNavigateToReportDetail(currentReport.id) },
+                        )
+                    }
+                    if (previousReport != null) {
+                        ReportSummaryRow(
+                            label = "Previous",
+                            report = previousReport,
+                            onClick = { onNavigateToReportDetail(previousReport.id) },
+                        )
                     }
 
                     // Income & Expenses chart
@@ -144,6 +146,7 @@ fun HomeScreen(
                 // Subscriptions summary
                 val subs = state.activeSubscriptions
                 if (subs != null && subs.items.isNotEmpty()) {
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
                     val totalMonthly = subs.items.sumOf { it.monthlyCost }
                     val currentIncome = state.reportsSummary?.items?.firstOrNull()
                         ?.transactions?.filter { it.type.rawValue == "INCOME" }
@@ -198,23 +201,25 @@ fun HomeScreen(
                                                 .fillMaxWidth()
                                                 .padding(vertical = 4.dp),
                                             horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically,
                                         ) {
-                                            Text(
-                                                sub.name,
-                                                style = MaterialTheme.typography.bodyMedium,
-                                            )
-                                            Column(horizontalAlignment = Alignment.End) {
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(
+                                                    sub.name,
+                                                    style = MaterialTheme.typography.bodyMedium,
+                                                )
                                                 Text(
                                                     formatDate(renewalDate.toString()),
                                                     style = MaterialTheme.typography.bodySmall,
                                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                                 )
-                                                Text(
-                                                    formatMoney(sub.amount),
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    color = MaterialTheme.colorScheme.primary,
-                                                )
                                             }
+                                            Text(
+                                                formatMoney(sub.amount),
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                fontWeight = FontWeight.Medium,
+                                                color = MaterialTheme.colorScheme.primary,
+                                            )
                                         }
                                     }
                                 }
@@ -226,6 +231,7 @@ fun HomeScreen(
                 // Net worth latest snapshot
                 val snapshot = state.latestSnapshot
                 if (snapshot != null) {
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -299,61 +305,60 @@ fun HomeScreen(
 }
 
 @Composable
-private fun HealthStatusCard(healthy: Boolean?) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = when (healthy) {
-                true -> MaterialTheme.colorScheme.surface
-                false -> MaterialTheme.colorScheme.errorContainer
-                null -> MaterialTheme.colorScheme.surface
-            }
+private fun HealthStatusDot(healthy: Boolean?) {
+    val color = when (healthy) {
+        true -> Green500
+        false -> MaterialTheme.colorScheme.error
+        null -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
+    val description = when (healthy) {
+        true -> "Server connected"
+        false -> "Cannot reach server"
+        null -> "Checking server..."
+    }
+    val transition = rememberInfiniteTransition(label = "health-pulse")
+    val alpha by transition.animateFloat(
+        initialValue = 1f,
+        targetValue = 0.3f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 900),
+            repeatMode = RepeatMode.Reverse,
         ),
+        label = "health-pulse-alpha",
+    )
+    Box(
+        modifier = Modifier
+            .size(10.dp)
+            .alpha(alpha)
+            .background(color, CircleShape),
+    )
+}
+
+@Composable
+private fun SummaryBadge(label: String) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(50))
+            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
+            .padding(horizontal = 8.dp, vertical = 2.dp),
     ) {
-        Row(
-            modifier = Modifier.padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(
-                imageVector = if (healthy == true) Icons.Default.CheckCircle else Icons.Default.Error,
-                contentDescription = null,
-                tint = if (healthy == true) Green500 else MaterialTheme.colorScheme.error,
-                modifier = Modifier.size(20.dp),
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = when (healthy) {
-                    true -> "Server connected"
-                    false -> "Cannot reach server"
-                    null -> "Checking server..."
-                },
-                style = MaterialTheme.typography.bodySmall,
-            )
-        }
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.primary,
+            fontWeight = FontWeight.Medium,
+        )
     }
 }
 
 @Composable
 private fun TotalReportsCard(totalCount: Int) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-        ),
-    ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Text(
-                text = "Total Reports",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "$totalCount",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-            )
-        }
+    SectionCard(title = "Total Reports") {
+        Text(
+            text = "$totalCount",
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+        )
     }
 }
 
@@ -371,10 +376,11 @@ private fun ReportSummaryRow(
             .fillMaxWidth()
             .clickable(onClick = onClick),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            containerColor = MaterialTheme.colorScheme.surface,
         ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
     ) {
-        Column(modifier = Modifier.padding(12.dp)) {
+        Column(modifier = Modifier.padding(16.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -385,11 +391,7 @@ private fun ReportSummaryRow(
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium,
                 )
-                Text(
-                    text = label,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                SummaryBadge(label = label)
             }
             Spacer(modifier = Modifier.height(4.dp))
             Row(
