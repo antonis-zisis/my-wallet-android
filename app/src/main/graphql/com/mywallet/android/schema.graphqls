@@ -5,7 +5,7 @@ enum TransactionType {
 
 type Query {
   health: String!
-  reports(page: Int): ReportsResult!
+  reports(page: Int, pageSize: Int): ReportsResult!
   report(id: ID!): Report
   transactions: [Transaction!]!
   transaction(id: ID!): Transaction
@@ -19,6 +19,8 @@ type Mutation {
   createReport(input: CreateReportInput!): Report!
   updateReport(input: UpdateReportInput!): Report!
   deleteReport(id: ID!): Boolean!
+  lockReport(id: ID!): Report!
+  unlockReport(id: ID!): Report!
   createTransaction(input: CreateTransactionInput!): Transaction!
   updateTransaction(input: UpdateTransactionInput!): Transaction!
   deleteTransaction(id: ID!): Boolean!
@@ -40,6 +42,7 @@ type User {
 type Report {
   id: ID!
   title: String!
+  isLocked: Boolean!
   transactions: [Transaction!]!
   createdAt: String!
   updatedAt: String!

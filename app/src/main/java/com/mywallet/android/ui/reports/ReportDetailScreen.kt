@@ -16,6 +16,8 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -89,7 +91,18 @@ fun ReportDetailScreen(
                             modifier = Modifier.fillMaxWidth(),
                         )
                     } else {
-                        Text(state.report?.title ?: "Report")
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(state.report?.title ?: "Report")
+                            if (state.report?.isLocked == true) {
+                                Spacer(modifier = Modifier.size(8.dp))
+                                Icon(
+                                    Icons.Default.Lock,
+                                    contentDescription = "Locked",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(18.dp),
+                                )
+                            }
+                        }
                     }
                 },
                 navigationIcon = {
@@ -109,6 +122,7 @@ fun ReportDetailScreen(
                             Text("Cancel")
                         }
                     } else {
+                        val isLocked = state.report?.isLocked == true
                         IconButton(onClick = { showMenu = true }) {
                             Icon(Icons.Default.MoreVert, contentDescription = "More options")
                         }
@@ -119,20 +133,35 @@ fun ReportDetailScreen(
                             DropdownMenuItem(
                                 text = { Text("Rename") },
                                 leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },
+                                enabled = !isLocked,
                                 onClick = {
                                     showMenu = false
                                     viewModel.startEditTitle()
                                 }
                             )
                             DropdownMenuItem(
-                                text = { Text("Delete Report", color = MaterialTheme.colorScheme.error) },
+                                text = { Text(if (isLocked) "Unlock Report" else "Lock Report") },
+                                leadingIcon = {
+                                    Icon(
+                                        if (isLocked) Icons.Default.LockOpen else Icons.Default.Lock,
+                                        contentDescription = null,
+                                    )
+                                },
+                                onClick = {
+                                    showMenu = false
+                                    viewModel.toggleLock()
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Delete Report", color = if (isLocked) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f) else MaterialTheme.colorScheme.error) },
                                 leadingIcon = {
                                     Icon(
                                         Icons.Default.Delete,
                                         contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.error,
+                                        tint = if (isLocked) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f) else MaterialTheme.colorScheme.error,
                                     )
                                 },
+                                enabled = !isLocked,
                                 onClick = {
                                     showMenu = false
                                     viewModel.showDeleteReport()
@@ -145,7 +174,7 @@ fun ReportDetailScreen(
             )
         },
         floatingActionButton = {
-            if (!state.isLoading && state.report != null) {
+            if (!state.isLoading && state.report != null && state.report?.isLocked != true) {
                 FloatingActionButton(onClick = viewModel::showAddTransaction) {
                     Icon(Icons.Default.Add, contentDescription = "Add transaction")
                 }
@@ -177,28 +206,23 @@ fun ReportDetailScreen(
                         Card(
                             modifier = Modifier.fillMaxWidth(),
                             colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                containerColor = MaterialTheme.colorScheme.surface,
                             ),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
                         ) {
-                            Column(modifier = Modifier.padding(16.dp)) {
-                                Text(
-                                    "Summary",
-                                    style = MaterialTheme.typography.titleSmall,
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                            ) {
+                                SummaryItem("Income", formatMoney(income), IncomeGreen)
+                                SummaryItem("Expenses", formatMoney(expenses), ExpenseRed)
+                                SummaryItem(
+                                    "Net Balance",
+                                    formatMoney(net),
+                                    if (net >= 0) IncomeGreen else ExpenseRed,
                                 )
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                ) {
-                                    SummaryItem("Income", formatMoney(income), IncomeGreen)
-                                    SummaryItem("Expenses", formatMoney(expenses), ExpenseRed)
-                                    SummaryItem(
-                                        "Net",
-                                        formatMoney(net),
-                                        if (net >= 0) IncomeGreen else ExpenseRed,
-                                    )
-                                }
                             }
                         }
                     }
@@ -234,6 +258,7 @@ fun ReportDetailScreen(
                     ) { tx ->
                         TransactionRow(
                             transaction = tx,
+                            isLocked = report.isLocked,
                             onEdit = { viewModel.showEditTransaction(tx) },
                             onDelete = { viewModel.confirmDeleteTransaction(tx) },
                         )
@@ -299,7 +324,7 @@ private fun SummaryItem(label: String, value: String, color: androidx.compose.ui
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onPrimaryContainer,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
@@ -307,6 +332,7 @@ private fun SummaryItem(label: String, value: String, color: androidx.compose.ui
 @Composable
 private fun TransactionRow(
     transaction: GetReportQuery.Transaction,
+    isLocked: Boolean,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
 ) {
@@ -320,12 +346,12 @@ private fun TransactionRow(
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = transaction.description,
+                text = transaction.category,
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium,
             )
             Text(
-                text = "${transaction.category} · ${formatDate(transaction.date)}",
+                text = "${transaction.description} · ${formatDate(transaction.date)}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -337,21 +363,23 @@ private fun TransactionRow(
             color = if (isIncome) IncomeGreen else ExpenseRed,
             modifier = Modifier.padding(horizontal = 8.dp),
         )
-        IconButton(onClick = onEdit, modifier = Modifier.size(36.dp)) {
-            Icon(
-                Icons.Default.Edit,
-                contentDescription = "Edit",
-                modifier = Modifier.size(18.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        IconButton(onClick = onDelete, modifier = Modifier.size(36.dp)) {
-            Icon(
-                Icons.Default.Delete,
-                contentDescription = "Delete",
-                modifier = Modifier.size(18.dp),
-                tint = MaterialTheme.colorScheme.error,
-            )
+        if (!isLocked) {
+            IconButton(onClick = onEdit, modifier = Modifier.size(36.dp)) {
+                Icon(
+                    Icons.Default.Edit,
+                    contentDescription = "Edit",
+                    modifier = Modifier.size(18.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            IconButton(onClick = onDelete, modifier = Modifier.size(36.dp)) {
+                Icon(
+                    Icons.Default.Delete,
+                    contentDescription = "Delete",
+                    modifier = Modifier.size(18.dp),
+                    tint = MaterialTheme.colorScheme.error,
+                )
+            }
         }
     }
     HorizontalDivider()
