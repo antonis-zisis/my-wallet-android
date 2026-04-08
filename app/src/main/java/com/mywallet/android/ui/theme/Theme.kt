@@ -2,9 +2,12 @@ package com.mywallet.android.ui.theme
 
 import android.app.Activity
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Shapes
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
+import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.platform.LocalView
@@ -70,6 +73,17 @@ fun MyWalletTheme(
     MaterialTheme(
         colorScheme = colorScheme,
         typography = AppTypography,
+        shapes = AppShapes,
         content = content,
     )
 }
+
+private val FourDp = RoundedCornerShape(4.dp)
+
+val AppShapes = Shapes(
+    extraSmall = FourDp,
+    small = FourDp,
+    medium = FourDp,
+    large = FourDp,
+    extraLarge = FourDp,
+)
