@@ -2,16 +2,19 @@ package com.mywallet.android.ui.reports
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -29,17 +32,21 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.snapshotFlow
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.mywallet.android.ui.components.EmptyState
 import com.mywallet.android.ui.components.ErrorMessage
 import com.mywallet.android.ui.components.LoadingScreen
-import com.mywallet.android.ui.components.PaginationControls
-import com.mywallet.android.util.formatDate
+import com.mywallet.android.util.formatRelativeTime
+import kotlinx.coroutines.flow.distinctUntilChanged
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -53,14 +60,44 @@ fun ReportsScreen(
     LaunchedEffect(lifecycle) {
         lifecycle.currentStateFlow.collect { lifecycleState ->
             if (lifecycleState == Lifecycle.State.RESUMED) {
-                viewModel.loadReports(state.currentPage)
+                viewModel.refresh()
             }
         }
     }
 
+    val listState = rememberLazyListState()
+    val shouldLoadMore by remember {
+        derivedStateOf {
+            val lastVisible = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1
+            val total = listState.layoutInfo.totalItemsCount
+            total > 0 && lastVisible >= total - 3
+        }
+    }
+
+    LaunchedEffect(listState) {
+        snapshotFlow { shouldLoadMore }
+            .distinctUntilChanged()
+            .collect { trigger ->
+                if (trigger) viewModel.loadMore()
+            }
+    }
+
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("Reports") })
+            TopAppBar(
+                title = {
+                    Column {
+                        Text("Reports")
+                        if (!state.isLoading && state.error == null && state.totalCount > 0) {
+                            Text(
+                                text = if (state.totalCount == 1) "1 report" else "${state.totalCount} reports",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                },
+            )
         },
         floatingActionButton = {
             FloatingActionButton(onClick = viewModel::showCreateDialog) {
@@ -71,47 +108,67 @@ fun ReportsScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(top = padding.calculateTopPadding())
+                .padding(padding)
         ) {
             when {
                 state.isLoading -> LoadingScreen()
                 state.error != null -> ErrorMessage(
                     message = state.error!!,
-                    onRetry = { viewModel.loadReports() },
+                    onRetry = { viewModel.refresh() },
                 )
                 state.reports.isEmpty() -> EmptyState("No reports yet. Create your first one!")
                 else -> {
-                    LazyColumn(modifier = Modifier.weight(1f)) {
+                    LazyColumn(
+                        state = listState,
+                        modifier = Modifier.weight(1f),
+                    ) {
                         items(state.reports, key = { it.id }) { report ->
                             ListItem(
                                 headlineContent = { Text(report.title) },
                                 supportingContent = {
                                     Text(
-                                        text = formatDate(report.createdAt),
+                                        text = formatRelativeTime(report.updatedAt),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
                                 },
                                 trailingContent = {
-                                    Icon(
-                                        Icons.Default.ChevronRight,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
+                                    androidx.compose.foundation.layout.Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    ) {
+                                        if (report.isLocked) {
+                                            Icon(
+                                                Icons.Default.Lock,
+                                                contentDescription = "Locked",
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                modifier = Modifier.size(16.dp),
+                                            )
+                                        }
+                                        Icon(
+                                            Icons.Default.ChevronRight,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
                                 },
                                 modifier = Modifier.clickable { onNavigateToDetail(report.id) },
                             )
                             HorizontalDivider()
                         }
-                    }
 
-                    if (state.totalCount > 20) {
-                        PaginationControls(
-                            currentPage = state.currentPage,
-                            totalCount = state.totalCount,
-                            onPrevious = viewModel::previousPage,
-                            onNext = viewModel::nextPage,
-                        )
+                        if (state.isLoadingMore) {
+                            item {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    CircularProgressIndicator()
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -124,28 +181,44 @@ fun ReportsScreen(
             onDismissRequest = viewModel::dismissCreateDialog,
             title = { Text("Create Report") },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     OutlinedTextField(
                         value = state.createTitle,
                         onValueChange = viewModel::onCreateTitleChange,
                         label = { Text("Report title") },
                         isError = state.createError != null,
                         singleLine = true,
+                        supportingText = {
+                            androidx.compose.foundation.layout.Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                            ) {
+                                Text(
+                                    text = state.createError ?: "Between 3–$MAX_REPORT_TITLE_LENGTH characters",
+                                    color = if (state.createError != null) {
+                                        MaterialTheme.colorScheme.error
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                    },
+                                    style = MaterialTheme.typography.bodySmall,
+                                )
+                                Text(
+                                    text = "${state.createTitle.length}/$MAX_REPORT_TITLE_LENGTH",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        },
                         modifier = Modifier.fillMaxWidth(),
                     )
-                    if (state.createError != null) {
-                        Text(
-                            text = state.createError!!,
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodySmall,
-                        )
-                    }
                 }
             },
             confirmButton = {
+                val trimmedLen = state.createTitle.trim().length
+                val isValid = trimmedLen in 3..MAX_REPORT_TITLE_LENGTH
                 Button(
                     onClick = { viewModel.createReport(onNavigateToDetail) },
-                    enabled = !state.isCreating,
+                    enabled = !state.isCreating && isValid,
                 ) {
                     if (state.isCreating) {
                         CircularProgressIndicator(modifier = Modifier.padding(horizontal = 8.dp))

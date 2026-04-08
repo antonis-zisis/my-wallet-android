@@ -4,6 +4,8 @@ import com.apollographql.apollo.ApolloClient
 import com.apollographql.apollo.api.Optional
 import com.mywallet.android.graphql.CreateReportMutation
 import com.mywallet.android.graphql.DeleteReportMutation
+import com.mywallet.android.graphql.LockReportMutation
+import com.mywallet.android.graphql.UnlockReportMutation
 import com.mywallet.android.graphql.GetReportQuery
 import com.mywallet.android.graphql.GetReportsQuery
 import com.mywallet.android.graphql.GetReportsSummaryQuery
@@ -17,10 +19,16 @@ import javax.inject.Singleton
 class ReportRepository @Inject constructor(
     private val apollo: ApolloClient,
 ) {
-    suspend fun getReports(page: Int? = null): Result<GetReportsQuery.Reports> {
+    suspend fun getReports(
+        page: Int? = null,
+        pageSize: Int? = null,
+    ): Result<GetReportsQuery.Reports> {
         return try {
             val response = apollo.query(
-                GetReportsQuery(page = Optional.presentIfNotNull(page))
+                GetReportsQuery(
+                    page = Optional.presentIfNotNull(page),
+                    pageSize = Optional.presentIfNotNull(pageSize),
+                )
             ).execute()
             val data = response.data?.reports ?: error("No data")
             Result.success(data)
@@ -68,6 +76,24 @@ class ReportRepository @Inject constructor(
             ).execute()
             val data = response.data?.updateReport ?: error("Failed to update report")
             Result.success(data)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun lockReport(id: String): Result<Unit> {
+        return try {
+            apollo.mutation(LockReportMutation(id = id)).execute()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun unlockReport(id: String): Result<Unit> {
+        return try {
+            apollo.mutation(UnlockReportMutation(id = id)).execute()
+            Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
         }

@@ -42,8 +42,18 @@ data class ReportDetailUiState(
 )
 
 val EXPENSE_CATEGORIES = listOf(
-    "Food", "Housing", "Transport", "Utilities", "Health",
-    "Entertainment", "Shopping", "Insurance", "Investment", "Loan", "Other"
+    "Rent",
+    "Utilities",
+    "Groceries",
+    "Dining Out",
+    "Transport",
+    "Health",
+    "Entertainment",
+    "Shopping",
+    "Investment",
+    "Insurance",
+    "Loan",
+    "Other",
 )
 
 val INCOME_CATEGORIES = listOf(
@@ -264,6 +274,18 @@ class ReportDetailViewModel @Inject constructor(
                     _uiState.value = _uiState.value.copy(isDeletingTransaction = false)
                 }
             )
+        }
+    }
+
+    fun toggleLock() {
+        val current = _uiState.value.report ?: return
+        viewModelScope.launch {
+            val result = if (current.isLocked) {
+                reportRepository.unlockReport(reportId)
+            } else {
+                reportRepository.lockReport(reportId)
+            }
+            result.onSuccess { loadReport() }
         }
     }
 

@@ -1,8 +1,9 @@
-query GetReports($page: Int) {
-  reports(page: $page) {
+query GetReports($page: Int, $pageSize: Int) {
+  reports(page: $page, pageSize: $pageSize) {
     items {
       id
       title
+      isLocked
       createdAt
       updatedAt
     }
@@ -14,6 +15,7 @@ query GetReport($id: ID!) {
   report(id: $id) {
     id
     title
+    isLocked
     createdAt
     updatedAt
     transactions {
@@ -63,4 +65,18 @@ mutation UpdateReport($input: UpdateReportInput!) {
 
 mutation DeleteReport($id: ID!) {
   deleteReport(id: $id)
+}
+
+mutation LockReport($id: ID!) {
+  lockReport(id: $id) {
+    id
+    isLocked
+  }
+}
+
+mutation UnlockReport($id: ID!) {
+  unlockReport(id: $id) {
+    id
+    isLocked
+  }
 }
