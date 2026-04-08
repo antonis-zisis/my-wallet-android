@@ -21,8 +21,7 @@ An Android application for personal budgeting, mirroring the [my-wallet](https:/
 - **Subscriptions** — active/inactive lists, create/edit/cancel/resume/delete, monthly & yearly cost summary cards, billing cycle badges, next renewal date
 - **Net Worth** — snapshot list, create snapshots with asset/liability entries, detail view
 - **Profile** — edit full name, change password, sign out
-- **Auth** — Supabase email/password login with session restore on launch
-- **Theme** — System / Light / Dark selection (persisted across launches)
+- **Authentication** — Supabase email/password login with session restore on launch
 
 ---
 
@@ -78,13 +77,13 @@ Apollo codegen runs automatically during the build, generating type-safe Kotlin 
 Start the Android emulator on Windows (via Android Studio AVD Manager), then from WSL:
 
 ```bash
-# Verify the emulator is visible
+# verify the emulator is visible
 adb devices
 
 # If nothing shows, connect to the Windows emulator from WSL2
 adb connect $(cat /etc/resolv.conf | grep nameserver | awk '{print $2}'):5554
 
-# Build then install
+# build then install
 ./gradlew assembleDebug
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
@@ -104,15 +103,12 @@ app/src/main/
 │   ├── subscriptions.graphql
 │   ├── netWorth.graphql
 │   └── user.graphql
-│
 ├── java/com/mywallet/android/
 │   ├── MyWalletApplication.kt   # Hilt app entry point
 │   ├── MainActivity.kt          # Single activity, bottom nav host
-│   │
 │   ├── di/
 │   │   ├── AppModule.kt         # OkHttpClient, DataStore
 │   │   └── NetworkModule.kt     # Apollo client + auth interceptor
-│   │
 │   ├── data/
 │   │   ├── remote/
 │   │   │   └── SupabaseAuthService.kt  # Direct Supabase REST auth calls
@@ -123,7 +119,6 @@ app/src/main/
 │   │       ├── SubscriptionRepository.kt
 │   │       ├── NetWorthRepository.kt
 │   │       └── UserRepository.kt
-│   │
 │   ├── ui/
 │   │   ├── theme/               # Material 3 colors, typography, dark mode
 │   │   ├── navigation/          # Screen routes, NavGraph
@@ -134,11 +129,9 @@ app/src/main/
 │   │   ├── subscriptions/       # SubscriptionsScreen + ViewModel
 │   │   ├── networth/            # NetWorthScreen, NetWorthDetailScreen + ViewModels
 │   │   └── profile/             # ProfileScreen + ProfileViewModel
-│   │
 │   └── util/
 │       ├── FormatMoney.kt       # Currency formatting
 │       └── FormatDate.kt        # Date parsing/formatting, renewal date calculation
-│
 └── res/
     ├── xml/network_security_config.xml  # Allows HTTP to localhost in dev
     └── values/                          # Strings, colors, themes
