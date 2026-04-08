@@ -1,6 +1,6 @@
 # My Wallet - Android
 
-An Android application to help with budgeting built with. Built with Kotlin + Jetpack Compose, targeting Google Play Store.
+An Android application for personal budgeting, mirroring the [my-wallet](https://github.com/antonis-zisis/my-wallet) web app. Built with Kotlin + Jetpack Compose, targeting Google Play Store.
 
 ## Tech Stack
 
@@ -16,12 +16,12 @@ An Android application to help with budgeting built with. Built with Kotlin + Je
 ## Features
 
 - **Dashboard** — server health, report summaries, subscription overview, upcoming renewals, net worth preview
-- **Reports** — paginated list, create/rename/delete reports
+- **Reports** — paginated list, create/rename/lock/delete reports
 - **Transactions** — add/edit/delete within a report (income & expense categories)
-- **Subscriptions** — active/inactive lists, create/edit/cancel/delete, monthly cost calculations
+- **Subscriptions** — active/inactive lists, create/edit/cancel/resume/delete, monthly & yearly cost summary cards, billing cycle badges, next renewal date
 - **Net Worth** — snapshot list, create snapshots with asset/liability entries, detail view
 - **Profile** — edit full name, change password, sign out
-- **Auth** — Supabase email/password login
+- **Auth** — Supabase email/password login with session restore on launch
 - **Theme** — System / Light / Dark selection (persisted across launches)
 
 ---
@@ -43,7 +43,7 @@ git config core.hooksPath .githooks
 - Java 17 in WSL (`sudo apt install openjdk-17-jdk`)
 - Android SDK in WSL (with `ANDROID_HOME` set)
 - Android emulator running on Windows, or a physical device connected via USB
-- The `my-wallet` backend running locally (`pnpm dev:backend`)
+- The `my-wallet` backend running locally (`pnpm dev:server` from the `my-wallet` repo)
 
 ### Step 1 — Configure secrets
 
@@ -51,7 +51,7 @@ git config core.hooksPath .githooks
 
 ```properties
 # path to your WSL Android SDK
-sdk.dir=/home/antonis/android
+sdk.dir=/home/your-username/android
 
 supabase.url=https://YOUR_PROJECT.supabase.co
 supabase.publishable_key=YOUR_SUPABASE_PUBLISHABLE_KEY
@@ -137,7 +137,7 @@ app/src/main/
 │   │
 │   └── util/
 │       ├── FormatMoney.kt       # Currency formatting
-│       └── FormatDate.kt        # Date parsing/formatting, renewal calculation
+│       └── FormatDate.kt        # Date parsing/formatting, renewal date calculation
 │
 └── res/
     ├── xml/network_security_config.xml  # Allows HTTP to localhost in dev
@@ -219,11 +219,37 @@ All configured in `local.properties` (gitignored):
 
 | Key                        | Description                              | Example                                          |
 |----------------------------|------------------------------------------|--------------------------------------------------|
-| `sdk.dir`                  | Android SDK path in WSL                  | `/home/antonis/android`                          |
+| `sdk.dir`                  | Android SDK path in WSL                  | `/home/your-username/android`                    |
 | `supabase.url`             | Supabase project URL                     | `https://xxxx.supabase.co`                       |
 | `supabase.publishable_key` | Supabase publishable key                 | `sb_publishable_...`                             |
 | `graphql.url`              | GraphQL backend endpoint                 | `http://10.0.2.2:4000/graphql`                   |
-| `signing.storeFile`        | Absolute path to release `.jks` keystore | `/home/antonis/keys/my-wallet-release.jks`       |
+| `signing.storeFile`        | Absolute path to release `.jks` keystore | `/home/your-username/keys/my-wallet-release.jks` |
 | `signing.storePassword`    | Keystore password                        | —                                                |
 | `signing.keyAlias`         | Key alias used when creating the store   | `my-wallet`                                      |
 | `signing.keyPassword`      | Key password                             | —                                                |
+
+---
+
+## Commit Convention
+
+This project uses [Conventional Commits](https://www.conventionalcommits.org/). The format is enforced by a git hook — run `git config core.hooksPath .githooks` after cloning.
+
+```text
+<type>(<scope>): <description>
+```
+
+Types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`
+
+Examples:
+
+- `feat(subscriptions): add resume subscription support`
+- `fix(auth): handle expired refresh token gracefully`
+- `chore: bump Compose BOM to 2025.05.00`
+
+---
+
+## License
+
+This project is licensed under the [Elastic License 2.0](LICENSE).
+
+You are free to use, fork, and self-host this software for personal use. You may not sell it or offer it as a hosted service to others.
