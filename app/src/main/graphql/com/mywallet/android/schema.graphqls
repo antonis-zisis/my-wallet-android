@@ -27,6 +27,7 @@ type Mutation {
   createSubscription(input: CreateSubscriptionInput!): AppSubscription!
   updateSubscription(input: UpdateSubscriptionInput!): AppSubscription!
   cancelSubscription(id: ID!): AppSubscription!
+  resumeSubscription(input: ResumeSubscriptionInput!): AppSubscription!
   deleteSubscription(id: ID!): Boolean!
   createNetWorthSnapshot(input: CreateNetWorthSnapshotInput!): NetWorthSnapshot!
   deleteNetWorthSnapshot(id: ID!): Boolean!
@@ -101,6 +102,7 @@ type AppSubscription {
   isActive: Boolean!
   startDate: String!
   endDate: String
+  cancelledAt: String
   monthlyCost: Float!
   createdAt: String!
   updatedAt: String!
@@ -109,6 +111,13 @@ type AppSubscription {
 type SubscriptionsResult {
   items: [AppSubscription!]!
   totalCount: Int!
+}
+
+input ResumeSubscriptionInput {
+  id: ID!
+  startDate: String
+  amount: Float
+  billingCycle: String
 }
 
 input CreateSubscriptionInput {

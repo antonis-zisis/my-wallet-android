@@ -19,6 +19,10 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -58,6 +62,12 @@ import com.mywallet.android.ui.components.ConfirmDialog
 import com.mywallet.android.ui.components.EmptyState
 import com.mywallet.android.ui.components.ErrorMessage
 import com.mywallet.android.ui.components.LoadingScreen
+import com.mywallet.android.ui.theme.Blue100
+import com.mywallet.android.ui.theme.Blue600
+import com.mywallet.android.ui.theme.Green100
+import com.mywallet.android.ui.theme.Green600
+import com.mywallet.android.ui.theme.Red100
+import com.mywallet.android.ui.theme.Red600
 import com.mywallet.android.util.formatDate
 import com.mywallet.android.util.formatMoney
 import com.mywallet.android.util.getNextRenewalDate
@@ -92,29 +102,63 @@ fun SubscriptionsScreen(
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    // Active section header with summary
+                    // Cost summary cards
                     item {
                         val totalMonthly = state.activeSubscriptions.sumOf { it.monthlyCost }
-                        Column {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically,
+                        val totalYearly = totalMonthly * 12
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        ) {
+                            Card(
+                                modifier = Modifier.weight(1f),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surface,
+                                ),
+                                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
                             ) {
-                                Text(
-                                    "Active (${state.activeSubscriptions.size})",
-                                    style = MaterialTheme.typography.titleMedium,
-                                )
-                                Column(horizontalAlignment = Alignment.End) {
+                                Column(modifier = Modifier.padding(16.dp)) {
                                     Text(
-                                        formatMoney(totalMonthly) + "/mo",
-                                        style = MaterialTheme.typography.titleSmall,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.primary,
+                                        text = "Monthly cost",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                    Text(
+                                        text = formatMoney(totalMonthly),
+                                        style = MaterialTheme.typography.titleLarge,
+                                        fontWeight = FontWeight.SemiBold,
+                                    )
+                                }
+                            }
+                            Card(
+                                modifier = Modifier.weight(1f),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surface,
+                                ),
+                                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                            ) {
+                                Column(modifier = Modifier.padding(16.dp)) {
+                                    Text(
+                                        text = "Yearly cost",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                    Text(
+                                        text = formatMoney(totalYearly),
+                                        style = MaterialTheme.typography.titleLarge,
+                                        fontWeight = FontWeight.SemiBold,
                                     )
                                 }
                             }
                         }
+                    }
+
+                    // Active section header
+                    item {
+                        Text(
+                            "Active (${state.activeSubscriptions.size})",
+                            style = MaterialTheme.typography.titleMedium,
+                        )
                     }
 
                     if (state.activeSubscriptions.isEmpty()) {
@@ -125,7 +169,8 @@ fun SubscriptionsScreen(
                         SubscriptionCard(
                             sub = sub,
                             onEdit = { viewModel.showEditForm(sub) },
-                            onCancel = { viewModel.confirmCancel(sub) },
+                            onCancel = if (sub.cancelledAt == null) { { viewModel.confirmCancel(sub) } } else null,
+                            onResume = if (sub.cancelledAt != null) { { viewModel.showResumeForm(sub) } } else null,
                             onDelete = { viewModel.confirmDelete(sub) },
                         )
                     }
@@ -161,6 +206,7 @@ fun SubscriptionsScreen(
                                 sub = sub,
                                 onEdit = { viewModel.showEditForm(sub) },
                                 onCancel = null,
+                                onResume = { viewModel.showResumeForm(sub) },
                                 onDelete = { viewModel.confirmDelete(sub) },
                             )
                         }
@@ -200,6 +246,19 @@ fun SubscriptionsScreen(
         )
     }
 
+    // Resume form
+    if (state.showResumeForm) {
+        ResumeFormDialog(
+            state = state.resumeForm,
+            isResuming = state.isResuming,
+            onAmountChange = viewModel::onResumeAmountChange,
+            onBillingCycleChange = viewModel::onResumeBillingCycleChange,
+            onStartDateChange = viewModel::onResumeStartDateChange,
+            onResume = viewModel::resumeSubscription,
+            onDismiss = viewModel::dismissResumeForm,
+        )
+    }
+
     // Delete confirm
     if (state.subscriptionToDelete != null) {
         ConfirmDialog(
@@ -219,6 +278,7 @@ private fun SubscriptionCard(
     sub: GetSubscriptionsQuery.Item,
     onEdit: () -> Unit,
     onCancel: (() -> Unit)?,
+    onResume: (() -> Unit)?,
     onDelete: () -> Unit,
 ) {
     var showMenu by remember { mutableStateOf(false) }
@@ -243,27 +303,47 @@ private fun SubscriptionCard(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = sub.name,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Medium,
-                )
-                Text(
-                    text = "${formatMoney(sub.amount)}/${sub.billingCycle.lowercase()} " +
-                            "(${formatMoney(sub.monthlyCost)}/mo)",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                if (nextRenewal != null && sub.isActive) {
-                    Text(
-                        text = "Renews: $nextRenewal",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                val isCancelled = sub.cancelledAt != null
+                val cycleLabel = if (sub.billingCycle == "MONTHLY") "Monthly" else "Yearly"
+                val (cycleBg, cycleFg) = if (sub.billingCycle == "MONTHLY") {
+                    Green100 to Green600
+                } else {
+                    Blue100 to Blue600
                 }
-                if (!sub.isActive && sub.endDate != null) {
+                val dateText = when {
+                    sub.isActive && isCancelled && sub.endDate != null ->
+                        "active until ${formatDate(sub.endDate)}"
+                    sub.isActive && nextRenewal != null ->
+                        "next renewal at ${formatDate(nextRenewal.toString())}"
+                    !sub.isActive && sub.endDate != null ->
+                        "active until ${formatDate(sub.endDate)}"
+                    else -> null
+                }
+                val altCost = if (sub.billingCycle == "MONTHLY") {
+                    "(${formatMoney(sub.amount * 12)}/yr)"
+                } else {
+                    "(${formatMoney(sub.monthlyCost)}/mo)"
+                }
+                // Title row with badge(s)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
                     Text(
-                        text = "Ended: ${formatDate(sub.endDate)}",
+                        text = sub.name,
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Medium,
+                    )
+                    SubscriptionBadge(cycleLabel, cycleBg, cycleFg)
+                    if (isCancelled) {
+                        SubscriptionBadge("Cancelled", Red100, Red600)
+                    }
+                }
+                Spacer(Modifier.height(2.dp))
+                // Subtitle row
+                if (dateText != null) {
+                    Text(
+                        text = "$dateText · ${formatMoney(sub.amount)} $altCost",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -290,6 +370,13 @@ private fun SubscriptionCard(
                         onClick = { showMenu = false; onCancel() },
                     )
                 }
+                if (onResume != null) {
+                    DropdownMenuItem(
+                        text = { Text("Resume") },
+                        leadingIcon = { Icon(Icons.Default.Refresh, contentDescription = null) },
+                        onClick = { showMenu = false; onResume() },
+                    )
+                }
                 DropdownMenuItem(
                     text = { Text("Delete", color = MaterialTheme.colorScheme.error) },
                     leadingIcon = {
@@ -304,6 +391,96 @@ private fun SubscriptionCard(
             }
         }
     }
+}
+
+@Composable
+private fun SubscriptionBadge(label: String, bg: androidx.compose.ui.graphics.Color, fg: androidx.compose.ui.graphics.Color) {
+    androidx.compose.foundation.layout.Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(50))
+            .background(bg)
+            .padding(horizontal = 8.dp, vertical = 2.dp),
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Medium,
+            color = fg,
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ResumeFormDialog(
+    state: ResumeFormState,
+    isResuming: Boolean,
+    onAmountChange: (String) -> Unit,
+    onBillingCycleChange: (String) -> Unit,
+    onStartDateChange: (String) -> Unit,
+    onResume: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Resume Subscription") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(
+                    text = "Enter a new start date for ${state.name}. You can also update the amount and billing cycle.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                OutlinedTextField(
+                    value = state.amount,
+                    onValueChange = onAmountChange,
+                    label = { Text("Amount") },
+                    singleLine = true,
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal
+                    ),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                    listOf("MONTHLY", "YEARLY").forEachIndexed { index, cycle ->
+                        SegmentedButton(
+                            selected = state.billingCycle == cycle,
+                            onClick = { onBillingCycleChange(cycle) },
+                            shape = SegmentedButtonDefaults.itemShape(index = index, count = 2),
+                        ) {
+                            Text(cycle.lowercase().replaceFirstChar { it.uppercase() })
+                        }
+                    }
+                }
+                OutlinedTextField(
+                    value = state.startDate,
+                    onValueChange = onStartDateChange,
+                    label = { Text("New Start Date (YYYY-MM-DD)") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                if (state.error != null) {
+                    Text(
+                        text = state.error,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(onClick = onResume, enabled = !isResuming) {
+                if (isResuming) {
+                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                } else {
+                    Text("Resume")
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss, enabled = !isResuming) { Text("Cancel") }
+        }
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

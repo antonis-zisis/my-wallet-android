@@ -24,6 +24,15 @@ data class SubscriptionFormState(
     val error: String? = null,
 )
 
+data class ResumeFormState(
+    val id: String = "",
+    val name: String = "",
+    val amount: String = "",
+    val billingCycle: String = "MONTHLY",
+    val startDate: String = "",
+    val error: String? = null,
+)
+
 data class SubscriptionsUiState(
     val isLoading: Boolean = true,
     val error: String? = null,
@@ -39,6 +48,9 @@ data class SubscriptionsUiState(
     val isSaving: Boolean = false,
     val subscriptionToCancel: GetSubscriptionsQuery.Item? = null,
     val isCancelling: Boolean = false,
+    val showResumeForm: Boolean = false,
+    val resumeForm: ResumeFormState = ResumeFormState(),
+    val isResuming: Boolean = false,
     val subscriptionToDelete: GetSubscriptionsQuery.Item? = null,
     val isDeleting: Boolean = false,
 )
@@ -179,6 +191,78 @@ class SubscriptionsViewModel @Inject constructor(
                 },
                 onFailure = {
                     _uiState.value = _uiState.value.copy(isCancelling = false)
+                }
+            )
+        }
+    }
+
+    // Resume
+    fun showResumeForm(sub: GetSubscriptionsQuery.Item) {
+        if (sub.isActive) {
+            // Still active — resume immediately, no need for a new start date
+            viewModelScope.launch {
+                subscriptionRepository.resumeSubscription(
+                    id = sub.id,
+                    startDate = null,
+                    amount = null,
+                    billingCycle = null,
+                ).fold(
+                    onSuccess = { loadAll() },
+                    onFailure = { /* ignore, user can retry via menu */ }
+                )
+            }
+            return
+        }
+        _uiState.value = _uiState.value.copy(
+            showResumeForm = true,
+            resumeForm = ResumeFormState(
+                id = sub.id,
+                name = sub.name,
+                amount = sub.amount.toString(),
+                billingCycle = sub.billingCycle,
+                startDate = "",
+            ),
+        )
+    }
+
+    fun dismissResumeForm() {
+        _uiState.value = _uiState.value.copy(showResumeForm = false)
+    }
+
+    fun onResumeAmountChange(v: String) = updateResumeForm { copy(amount = v, error = null) }
+    fun onResumeBillingCycleChange(v: String) = updateResumeForm { copy(billingCycle = v, error = null) }
+    fun onResumeStartDateChange(v: String) = updateResumeForm { copy(startDate = v, error = null) }
+
+    private fun updateResumeForm(update: ResumeFormState.() -> ResumeFormState) {
+        _uiState.value = _uiState.value.copy(resumeForm = _uiState.value.resumeForm.update())
+    }
+
+    fun resumeSubscription() {
+        val form = _uiState.value.resumeForm
+        if (form.startDate.isBlank()) {
+            updateResumeForm { copy(error = "Start date is required") }
+            return
+        }
+        val amount = form.amount.toDoubleOrNull()
+        if (amount == null || amount <= 0) {
+            updateResumeForm { copy(error = "Enter a valid amount") }
+            return
+        }
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isResuming = true)
+            subscriptionRepository.resumeSubscription(
+                id = form.id,
+                startDate = form.startDate,
+                amount = amount,
+                billingCycle = form.billingCycle,
+            ).fold(
+                onSuccess = {
+                    _uiState.value = _uiState.value.copy(isResuming = false, showResumeForm = false)
+                    loadAll()
+                },
+                onFailure = { e ->
+                    _uiState.value = _uiState.value.copy(isResuming = false)
+                    updateResumeForm { copy(error = e.message ?: "Failed to resume") }
                 }
             )
         }
