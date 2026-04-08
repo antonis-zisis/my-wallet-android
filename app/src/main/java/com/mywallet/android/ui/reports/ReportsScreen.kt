@@ -4,6 +4,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -121,6 +122,7 @@ fun ReportsScreen(
                     LazyColumn(
                         state = listState,
                         modifier = Modifier.weight(1f),
+                        contentPadding = PaddingValues(vertical = 16.dp),
                     ) {
                         items(state.reports, key = { it.id }) { report ->
                             ListItem(

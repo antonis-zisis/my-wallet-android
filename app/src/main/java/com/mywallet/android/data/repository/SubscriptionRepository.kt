@@ -6,8 +6,10 @@ import com.mywallet.android.graphql.CancelSubscriptionMutation
 import com.mywallet.android.graphql.CreateSubscriptionMutation
 import com.mywallet.android.graphql.DeleteSubscriptionMutation
 import com.mywallet.android.graphql.GetSubscriptionsQuery
+import com.mywallet.android.graphql.ResumeSubscriptionMutation
 import com.mywallet.android.graphql.UpdateSubscriptionMutation
 import com.mywallet.android.graphql.type.CreateSubscriptionInput
+import com.mywallet.android.graphql.type.ResumeSubscriptionInput
 import com.mywallet.android.graphql.type.UpdateSubscriptionInput
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -92,6 +94,30 @@ class SubscriptionRepository @Inject constructor(
         return try {
             val response = apollo.mutation(CancelSubscriptionMutation(id = id)).execute()
             val data = response.data?.cancelSubscription ?: error("Failed to cancel subscription")
+            Result.success(data)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun resumeSubscription(
+        id: String,
+        startDate: String?,
+        amount: Double?,
+        billingCycle: String?,
+    ): Result<ResumeSubscriptionMutation.ResumeSubscription> {
+        return try {
+            val response = apollo.mutation(
+                ResumeSubscriptionMutation(
+                    input = ResumeSubscriptionInput(
+                        id = id,
+                        startDate = Optional.presentIfNotNull(startDate),
+                        amount = Optional.presentIfNotNull(amount),
+                        billingCycle = Optional.presentIfNotNull(billingCycle),
+                    )
+                )
+            ).execute()
+            val data = response.data?.resumeSubscription ?: error("Failed to resume subscription")
             Result.success(data)
         } catch (e: Exception) {
             Result.failure(e)
