@@ -96,14 +96,14 @@ For a **physical device**: enable USB debugging, then `adb devices` should show 
 
 ```text
 app/src/main/
-├── graphql/com/mywallet/android/
+├── graphql/com/antoniszisis/mywallet/
 │   ├── schema.graphqls          # Server schema (used by Apollo codegen)
 │   ├── reports.graphql
 │   ├── transactions.graphql
 │   ├── subscriptions.graphql
 │   ├── netWorth.graphql
 │   └── user.graphql
-├── java/com/mywallet/android/
+├── java/com/antoniszisis/mywallet/
 │   ├── MyWalletApplication.kt   # Hilt app entry point
 │   ├── MainActivity.kt          # Single activity, bottom nav host
 │   ├── di/
@@ -203,6 +203,14 @@ signing.keyPassword=your_key_password
 ```
 
 Output: `app/build/outputs/bundle/release/app-release.aab`
+
+### Subsequent releases
+
+For each update:
+
+1. Bump `versionCode` (must always increase) and `versionName` in `app/build.gradle.kts` (lines 27–28)
+2. Run `./gradlew bundleRelease` again
+3. Upload the new AAB via a new release in Play Console
 
 ---
 

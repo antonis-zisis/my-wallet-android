@@ -16,11 +16,11 @@ val localProperties = Properties().apply {
 }
 
 android {
-    namespace = "com.mywallet.android"
+    namespace = "com.antoniszisis.mywallet"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.mywallet.android"
+        applicationId = "com.antoniszisis.mywallet"
         minSdk = 26
         targetSdk = 35
         versionCode = 1
@@ -87,7 +87,7 @@ android {
 
 apollo {
     service("service") {
-        packageName.set("com.mywallet.android.graphql")
+        packageName.set("com.antoniszisis.mywallet.graphql")
         // Schema and .graphql files are auto-discovered from src/main/graphql/
     }
 }
