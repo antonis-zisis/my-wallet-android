@@ -1,5 +1,7 @@
 package com.antoniszisis.mywallet.ui.theme
 
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
 // Indigo (brand — replaces Blue as primary)
@@ -84,8 +86,7 @@ val DarkOnError = Color.White
 val DarkErrorContainer = Color(0xFF7F1D1D)
 val DarkOutline = Gray600
 
-// Semantic colors (used directly in composables)
-val IncomeGreen = Green500
-val ExpenseRed = Red500
-val NetWorthPositive = Green500
-val NetWorthNegative = Red500
+// Semantic color getters — resolve to dark-lift variants in dark mode
+@Composable fun incomeColor() = if (isSystemInDarkTheme()) Green400 else Green500
+@Composable fun expenseColor() = if (isSystemInDarkTheme()) Red400 else Red500
+@Composable fun netWorthColor(positive: Boolean) = if (positive) incomeColor() else expenseColor()

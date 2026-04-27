@@ -56,11 +56,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.antoniszisis.mywallet.graphql.GetReportsSummaryQuery
 import com.antoniszisis.mywallet.ui.components.LoadingScreen
 import com.antoniszisis.mywallet.ui.components.SectionCard
-import com.antoniszisis.mywallet.ui.theme.ExpenseRed
-import com.antoniszisis.mywallet.ui.theme.Green500
-import com.antoniszisis.mywallet.ui.theme.IncomeGreen
-import com.antoniszisis.mywallet.ui.theme.NetWorthNegative
-import com.antoniszisis.mywallet.ui.theme.NetWorthPositive
+import com.antoniszisis.mywallet.ui.theme.expenseColor
+import com.antoniszisis.mywallet.ui.theme.incomeColor
+import com.antoniszisis.mywallet.ui.theme.netWorthColor
 import com.antoniszisis.mywallet.util.formatDate
 import com.antoniszisis.mywallet.util.formatMoney
 import com.antoniszisis.mywallet.util.getNextRenewalDate
@@ -255,7 +253,7 @@ fun HomeScreen(
                                     text = formatMoney(snapshot.netWorth),
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold,
-                                    color = if (snapshot.netWorth >= 0) NetWorthPositive else NetWorthNegative,
+                                    color = netWorthColor(snapshot.netWorth >= 0),
                                 )
                             }
                             Spacer(modifier = Modifier.height(8.dp))
@@ -272,7 +270,7 @@ fun HomeScreen(
                                     Text(
                                         formatMoney(snapshot.totalAssets),
                                         style = MaterialTheme.typography.bodyMedium,
-                                        color = IncomeGreen,
+                                        color = incomeColor(),
                                     )
                                 }
                                 Column(horizontalAlignment = Alignment.End) {
@@ -284,7 +282,7 @@ fun HomeScreen(
                                     Text(
                                         formatMoney(snapshot.totalLiabilities),
                                         style = MaterialTheme.typography.bodyMedium,
-                                        color = ExpenseRed,
+                                        color = expenseColor(),
                                     )
                                 }
                             }
@@ -307,7 +305,7 @@ fun HomeScreen(
 @Composable
 private fun HealthStatusDot(healthy: Boolean?) {
     val color = when (healthy) {
-        true -> Green500
+        true -> incomeColor()
         false -> MaterialTheme.colorScheme.error
         null -> MaterialTheme.colorScheme.onSurfaceVariant
     }
@@ -402,28 +400,28 @@ private fun ReportSummaryRow(
                     Icon(
                         Icons.Default.ArrowUpward,
                         contentDescription = null,
-                        tint = IncomeGreen,
+                        tint = incomeColor(),
                         modifier = Modifier.size(14.dp),
                     )
                     Spacer(modifier = Modifier.width(2.dp))
                     Text(
                         text = formatMoney(income),
                         style = MaterialTheme.typography.bodySmall,
-                        color = IncomeGreen,
+                        color = incomeColor(),
                     )
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         Icons.Default.ArrowDownward,
                         contentDescription = null,
-                        tint = ExpenseRed,
+                        tint = expenseColor(),
                         modifier = Modifier.size(14.dp),
                     )
                     Spacer(modifier = Modifier.width(2.dp))
                     Text(
                         text = formatMoney(expenses),
                         style = MaterialTheme.typography.bodySmall,
-                        color = ExpenseRed,
+                        color = expenseColor(),
                     )
                 }
             }
@@ -455,7 +453,7 @@ private fun IncomeExpensesChart(
                 Box(
                     modifier = Modifier
                         .size(10.dp)
-                        .background(IncomeGreen, RoundedCornerShape(2.dp))
+                        .background(incomeColor(), RoundedCornerShape(2.dp))
                 )
                 Spacer(Modifier.width(4.dp))
                 Text("Income", style = MaterialTheme.typography.labelSmall)
@@ -464,7 +462,7 @@ private fun IncomeExpensesChart(
                 Box(
                     modifier = Modifier
                         .size(10.dp)
-                        .background(ExpenseRed, RoundedCornerShape(2.dp))
+                        .background(expenseColor(), RoundedCornerShape(2.dp))
                 )
                 Spacer(Modifier.width(4.dp))
                 Text("Expenses", style = MaterialTheme.typography.labelSmall)
@@ -494,7 +492,7 @@ private fun IncomeExpensesChart(
                         modifier = Modifier
                             .width(12.dp)
                             .height(barMaxHeight * incomeRatio)
-                            .background(IncomeGreen, RoundedCornerShape(topStart = 3.dp, topEnd = 3.dp))
+                            .background(incomeColor(), RoundedCornerShape(topStart = 3.dp, topEnd = 3.dp))
                             .clickable { onReportClick(report.id) }
                     )
                     Spacer(Modifier.width(2.dp))
@@ -502,7 +500,7 @@ private fun IncomeExpensesChart(
                         modifier = Modifier
                             .width(12.dp)
                             .height(barMaxHeight * expensesRatio)
-                            .background(ExpenseRed, RoundedCornerShape(topStart = 3.dp, topEnd = 3.dp))
+                            .background(expenseColor(), RoundedCornerShape(topStart = 3.dp, topEnd = 3.dp))
                             .clickable { onReportClick(report.id) }
                     )
                 }
