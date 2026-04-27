@@ -61,8 +61,8 @@ import com.antoniszisis.mywallet.graphql.GetReportQuery
 import com.antoniszisis.mywallet.ui.components.ConfirmDialog
 import com.antoniszisis.mywallet.ui.components.ErrorMessage
 import com.antoniszisis.mywallet.ui.components.LoadingScreen
-import com.antoniszisis.mywallet.ui.theme.ExpenseRed
-import com.antoniszisis.mywallet.ui.theme.IncomeGreen
+import com.antoniszisis.mywallet.ui.theme.expenseColor
+import com.antoniszisis.mywallet.ui.theme.incomeColor
 import com.antoniszisis.mywallet.util.formatDate
 import com.antoniszisis.mywallet.util.formatMoney
 
@@ -216,12 +216,12 @@ fun ReportDetailScreen(
                                     .padding(16.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                             ) {
-                                SummaryItem("Income", formatMoney(income), IncomeGreen)
-                                SummaryItem("Expenses", formatMoney(expenses), ExpenseRed)
+                                SummaryItem("Income", formatMoney(income), incomeColor())
+                                SummaryItem("Expenses", formatMoney(expenses), expenseColor())
                                 SummaryItem(
                                     "Net Balance",
                                     formatMoney(net),
-                                    if (net >= 0) IncomeGreen else ExpenseRed,
+                                    if (net >= 0) incomeColor() else expenseColor(),
                                 )
                             }
                         }
@@ -360,7 +360,7 @@ private fun TransactionRow(
             text = (if (isIncome) "+" else "-") + formatMoney(transaction.amount),
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Bold,
-            color = if (isIncome) IncomeGreen else ExpenseRed,
+            color = if (isIncome) incomeColor() else expenseColor(),
             modifier = Modifier.padding(horizontal = 8.dp),
         )
         if (!isLocked) {

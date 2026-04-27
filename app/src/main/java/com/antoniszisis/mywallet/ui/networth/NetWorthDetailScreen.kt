@@ -35,10 +35,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.antoniszisis.mywallet.ui.components.ConfirmDialog
 import com.antoniszisis.mywallet.ui.components.ErrorMessage
 import com.antoniszisis.mywallet.ui.components.LoadingScreen
-import com.antoniszisis.mywallet.ui.theme.ExpenseRed
-import com.antoniszisis.mywallet.ui.theme.IncomeGreen
-import com.antoniszisis.mywallet.ui.theme.NetWorthNegative
-import com.antoniszisis.mywallet.ui.theme.NetWorthPositive
+import com.antoniszisis.mywallet.ui.theme.expenseColor
+import com.antoniszisis.mywallet.ui.theme.incomeColor
 import com.antoniszisis.mywallet.util.formatDate
 import com.antoniszisis.mywallet.util.formatMoney
 
@@ -110,12 +108,12 @@ fun NetWorthDetailScreen(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                 ) {
-                                    NetWorthStat("Assets", formatMoney(snapshot.totalAssets), IncomeGreen)
-                                    NetWorthStat("Liabilities", formatMoney(snapshot.totalLiabilities), ExpenseRed)
+                                    NetWorthStat("Assets", formatMoney(snapshot.totalAssets), incomeColor())
+                                    NetWorthStat("Liabilities", formatMoney(snapshot.totalLiabilities), expenseColor())
                                     NetWorthStat(
                                         "Net Worth",
                                         formatMoney(snapshot.netWorth),
-                                        if (snapshot.netWorth >= 0) NetWorthPositive else NetWorthNegative,
+                                        if (snapshot.netWorth >= 0) incomeColor() else expenseColor(),
                                     )
                                 }
                             }
@@ -128,7 +126,7 @@ fun NetWorthDetailScreen(
                             Text(
                                 "Assets",
                                 style = MaterialTheme.typography.titleMedium,
-                                color = IncomeGreen,
+                                color = incomeColor(),
                             )
                         }
                         items(assets, key = { it.id }) { entry ->
@@ -150,7 +148,7 @@ fun NetWorthDetailScreen(
                                     formatMoney(entry.amount),
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = FontWeight.Medium,
-                                    color = IncomeGreen,
+                                    color = incomeColor(),
                                 )
                             }
                             HorizontalDivider()
@@ -164,7 +162,7 @@ fun NetWorthDetailScreen(
                             Text(
                                 "Liabilities",
                                 style = MaterialTheme.typography.titleMedium,
-                                color = ExpenseRed,
+                                color = expenseColor(),
                             )
                         }
                         items(liabilities, key = { it.id }) { entry ->
@@ -186,7 +184,7 @@ fun NetWorthDetailScreen(
                                     formatMoney(entry.amount),
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = FontWeight.Medium,
-                                    color = ExpenseRed,
+                                    color = expenseColor(),
                                 )
                             }
                             HorizontalDivider()

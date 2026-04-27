@@ -62,12 +62,9 @@ import com.antoniszisis.mywallet.ui.components.ConfirmDialog
 import com.antoniszisis.mywallet.ui.components.EmptyState
 import com.antoniszisis.mywallet.ui.components.ErrorMessage
 import com.antoniszisis.mywallet.ui.components.LoadingScreen
-import com.antoniszisis.mywallet.ui.theme.Blue100
-import com.antoniszisis.mywallet.ui.theme.Blue600
-import com.antoniszisis.mywallet.ui.theme.Green100
-import com.antoniszisis.mywallet.ui.theme.Green600
-import com.antoniszisis.mywallet.ui.theme.Red100
-import com.antoniszisis.mywallet.ui.theme.Red600
+import com.antoniszisis.mywallet.ui.theme.cancelledBadgeColors
+import com.antoniszisis.mywallet.ui.theme.monthlyBadgeColors
+import com.antoniszisis.mywallet.ui.theme.yearlyBadgeColors
 import com.antoniszisis.mywallet.util.formatDate
 import com.antoniszisis.mywallet.util.formatMoney
 import com.antoniszisis.mywallet.util.getNextRenewalDate
@@ -306,9 +303,9 @@ private fun SubscriptionCard(
                 val isCancelled = sub.cancelledAt != null
                 val cycleLabel = if (sub.billingCycle == "MONTHLY") "Monthly" else "Yearly"
                 val (cycleBg, cycleFg) = if (sub.billingCycle == "MONTHLY") {
-                    Green100 to Green600
+                    monthlyBadgeColors()
                 } else {
-                    Blue100 to Blue600
+                    yearlyBadgeColors()
                 }
                 val dateText = when {
                     sub.isActive && isCancelled && sub.endDate != null ->
@@ -336,7 +333,8 @@ private fun SubscriptionCard(
                     )
                     SubscriptionBadge(cycleLabel, cycleBg, cycleFg)
                     if (isCancelled) {
-                        SubscriptionBadge("Cancelled", Red100, Red600)
+                        val (cancelBg, cancelFg) = cancelledBadgeColors()
+                        SubscriptionBadge("Cancelled", cancelBg, cancelFg)
                     }
                 }
                 Spacer(Modifier.height(2.dp))

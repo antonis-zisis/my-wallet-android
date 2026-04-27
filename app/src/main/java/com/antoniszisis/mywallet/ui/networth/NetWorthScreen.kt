@@ -59,10 +59,8 @@ import com.antoniszisis.mywallet.ui.components.EmptyState
 import com.antoniszisis.mywallet.ui.components.ErrorMessage
 import com.antoniszisis.mywallet.ui.components.LoadingScreen
 import com.antoniszisis.mywallet.ui.components.PaginationControls
-import com.antoniszisis.mywallet.ui.theme.ExpenseRed
-import com.antoniszisis.mywallet.ui.theme.IncomeGreen
-import com.antoniszisis.mywallet.ui.theme.NetWorthNegative
-import com.antoniszisis.mywallet.ui.theme.NetWorthPositive
+import com.antoniszisis.mywallet.ui.theme.incomeColor
+import com.antoniszisis.mywallet.ui.theme.netWorthColor
 import com.antoniszisis.mywallet.util.formatDate
 import com.antoniszisis.mywallet.util.formatMoney
 
@@ -165,13 +163,13 @@ private fun SnapshotListItem(
                     Text(
                         "Assets: ${formatMoney(snapshot.totalAssets)}",
                         style = MaterialTheme.typography.bodySmall,
-                        color = IncomeGreen,
+                        color = incomeColor(),
                     )
                     Text(
                         "Net: ${formatMoney(snapshot.netWorth)}",
                         style = MaterialTheme.typography.bodySmall,
                         fontWeight = FontWeight.Bold,
-                        color = if (snapshot.netWorth >= 0) NetWorthPositive else NetWorthNegative,
+                        color = netWorthColor(snapshot.netWorth >= 0),
                     )
                 }
                 Text(
@@ -241,7 +239,7 @@ private fun CreateSnapshotDialog(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
-                    Text("Assets: ${formatMoney(totalAssets)}", color = IncomeGreen)
+                    Text("Assets: ${formatMoney(totalAssets)}", color = incomeColor())
                     Text("Net: ${formatMoney(totalAssets - totalLiabilities)}")
                 }
 
