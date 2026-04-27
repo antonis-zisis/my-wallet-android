@@ -2,23 +2,34 @@ package com.antoniszisis.mywallet.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Brand colors matching the web app
+// Indigo (brand — replaces Blue as primary)
+val Indigo50 = Color(0xFFEEF2FF)
+val Indigo100 = Color(0xFFE0E7FF)
+val Indigo400 = Color(0xFF818CF8)
+val Indigo600 = Color(0xFF4F46E5)
+val Indigo700 = Color(0xFF4338CA)
+val Indigo800 = Color(0xFF3730A3)
+
+// Blue (kept for call-sites not yet migrated)
 val Blue500 = Color(0xFF3B82F6)
 val Blue600 = Color(0xFF2563EB)
 val Blue700 = Color(0xFF1D4ED8)
 val Blue100 = Color(0xFFDBEAFE)
 val Blue50 = Color(0xFFEFF6FF)
 
+val Green400 = Color(0xFF34D399)
 val Green500 = Color(0xFF10B981)
 val Green600 = Color(0xFF059669)
 val Green100 = Color(0xFFD1FAE5)
 val Green50 = Color(0xFFECFDF5)
 
+val Red400 = Color(0xFFF87171)
 val Red500 = Color(0xFFEF4444)
 val Red600 = Color(0xFFDC2626)
 val Red100 = Color(0xFFFEE2E2)
 val Red50 = Color(0xFFFEF2F2)
 
+val Amber400 = Color(0xFFFBBF24)
 val Amber500 = Color(0xFFF59E0B)
 val Amber100 = Color(0xFFFDE68A)
 
@@ -34,10 +45,10 @@ val Gray800 = Color(0xFF1F2937)
 val Gray900 = Color(0xFF111827)
 
 // Light theme
-val LightPrimary = Blue500
+val LightPrimary = Indigo600
 val LightOnPrimary = Color.White
-val LightPrimaryContainer = Blue100
-val LightOnPrimaryContainer = Blue700
+val LightPrimaryContainer = Indigo100
+val LightOnPrimaryContainer = Indigo800
 val LightSecondary = Gray600
 val LightOnSecondary = Color.White
 val LightSecondaryContainer = Gray100
@@ -54,10 +65,10 @@ val LightErrorContainer = Red100
 val LightOutline = Gray300
 
 // Dark theme
-val DarkPrimary = Blue500
+val DarkPrimary = Indigo600
 val DarkOnPrimary = Color.White
-val DarkPrimaryContainer = Blue700
-val DarkOnPrimaryContainer = Blue100
+val DarkPrimaryContainer = Indigo800
+val DarkOnPrimaryContainer = Indigo100
 val DarkSecondary = Gray400
 val DarkOnSecondary = Gray900
 val DarkSecondaryContainer = Gray700
