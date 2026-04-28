@@ -2,8 +2,13 @@ package com.antoniszisis.mywallet.util
 
 import java.time.Instant
 import java.time.LocalDate
+import java.time.YearMonth
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.util.Locale
+
+private val reportTitleInputFormatter = DateTimeFormatter.ofPattern("MMMM yyyy", Locale.ENGLISH)
+private val reportTitleOutputFormatter = DateTimeFormatter.ofPattern("MMM ''yy", Locale.ENGLISH)
 
 private val displayFormatter = DateTimeFormatter.ofPattern("MMM d, yyyy")
 private val shortFormatter = DateTimeFormatter.ofPattern("MMM d")
@@ -22,6 +27,12 @@ private fun parseToLocalDate(raw: String): LocalDate {
     } catch (_: Exception) {
         LocalDate.parse(raw.take(10))
     }
+}
+
+fun formatReportTitle(title: String): String = try {
+    YearMonth.parse(title, reportTitleInputFormatter).format(reportTitleOutputFormatter)
+} catch (_: Exception) {
+    title
 }
 
 fun formatDate(isoString: String): String {

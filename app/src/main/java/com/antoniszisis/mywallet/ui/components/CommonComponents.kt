@@ -106,6 +106,7 @@ fun SectionCard(
     title: String,
     modifier: Modifier = Modifier,
     trailing: @Composable (() -> Unit)? = null,
+    showContentGap: Boolean = true,
     content: @Composable () -> Unit,
 ) {
     Card(
@@ -115,7 +116,7 @@ fun SectionCard(
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = if (showContentGap) 16.dp else 8.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -127,7 +128,7 @@ fun SectionCard(
                 )
                 trailing?.invoke()
             }
-            Spacer(modifier = Modifier.height(12.dp))
+            if (showContentGap) Spacer(modifier = Modifier.height(12.dp))
             content()
         }
     }
