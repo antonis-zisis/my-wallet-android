@@ -40,6 +40,7 @@ import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -77,6 +78,9 @@ import com.antoniszisis.mywallet.util.getNextRenewalDate
 fun HomeScreen(
     onNavigateToReportDetail: (String) -> Unit,
     onNavigateToNetWorthDetail: (String) -> Unit,
+    onNavigateToSubscriptions: () -> Unit,
+    onNavigateToNetWorth: () -> Unit,
+    onNavigateToReports: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -92,6 +96,11 @@ fun HomeScreen(
         if (state.isLoading) {
             LoadingScreen()
         } else {
+            PullToRefreshBox(
+                isRefreshing = state.isRefreshing,
+                onRefresh = { viewModel.refresh() },
+                modifier = Modifier.fillMaxSize(),
+            ) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -101,28 +110,28 @@ fun HomeScreen(
             ) {
                 // Reports section
                 val reportsSummary = state.reportsSummary
-                if (reportsSummary != null) {
-                    val items = reportsSummary.items
-                    val currentReport = items.firstOrNull()
-                    val previousReport = if (items.size > 1) items[1] else null
+                val reportItems = reportsSummary?.items ?: emptyList()
 
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Description,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Text(
-                            text = "Reports",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    TotalReportsCard(totalCount = reportsSummary.totalCount)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Description,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        text = "Reports",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                if (reportItems.isNotEmpty()) {
+                    val currentReport = reportItems.firstOrNull()
+                    val previousReport = if (reportItems.size > 1) reportItems[1] else null
+                    TotalReportsCard(totalCount = reportsSummary!!.totalCount)
                     if (currentReport != null) {
                         ReportSummaryRow(
                             label = "Current",
@@ -137,52 +146,55 @@ fun HomeScreen(
                             onClick = { onNavigateToReportDetail(previousReport.id) },
                         )
                     }
-
-                    // Income & Expenses chart
-                    if (items.isNotEmpty()) {
-                        var chartExpanded by remember { mutableStateOf(false) }
-                        SectionCard(
-                            title = "Monthly Summary",
-                            showContentGap = chartExpanded,
-                            trailing = {
-                                IconButton(onClick = { chartExpanded = !chartExpanded }) {
-                                    Icon(
-                                        imageVector = if (chartExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                                        contentDescription = if (chartExpanded) "Collapse" else "Expand",
-                                    )
-                                }
-                            },
-                        ) {
-                            AnimatedVisibility(visible = chartExpanded) {
-                                IncomeExpensesChart(
-                                    reports = items,
-                                    onReportClick = onNavigateToReportDetail,
+                    var chartExpanded by remember { mutableStateOf(false) }
+                    SectionCard(
+                        title = "Monthly Summary",
+                        showContentGap = chartExpanded,
+                        trailing = {
+                            IconButton(onClick = { chartExpanded = !chartExpanded }) {
+                                Icon(
+                                    imageVector = if (chartExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                                    contentDescription = if (chartExpanded) "Collapse" else "Expand",
                                 )
                             }
+                        },
+                    ) {
+                        AnimatedVisibility(visible = chartExpanded) {
+                            IncomeExpensesChart(
+                                reports = reportItems,
+                                onReportClick = onNavigateToReportDetail,
+                            )
                         }
                     }
+                } else {
+                    SectionEmptyState(
+                        message = "No reports yet.",
+                        description = "Add a report to see your income and expenses over time.",
+                        actionText = "Add a report",
+                        onAction = onNavigateToReports,
+                    )
                 }
 
                 // Subscriptions summary
                 val subs = state.activeSubscriptions
+                Row(
+                    modifier = Modifier.padding(top = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Subscriptions,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        text = "Subscriptions",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
                 if (subs != null && subs.items.isNotEmpty()) {
-                    Row(
-                        modifier = Modifier.padding(top = 16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Subscriptions,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Text(
-                            text = "Subscriptions",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -336,6 +348,13 @@ fun HomeScreen(
                             }
                         }
                     }
+                } else {
+                    SectionEmptyState(
+                        message = "No subscriptions tracked yet",
+                        description = "Add your recurring bills to track monthly costs and upcoming renewals.",
+                        actionText = "Add a subscription",
+                        onAction = onNavigateToSubscriptions,
+                    )
                 }
 
                 // Net worth section
@@ -356,24 +375,29 @@ fun HomeScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                var netWorthExpanded by remember { mutableStateOf(false) }
-                SectionCard(
-                    title = "Net Worth",
-                    showContentGap = netWorthExpanded,
-                    trailing = {
-                        IconButton(onClick = { netWorthExpanded = !netWorthExpanded }) {
-                            Icon(
-                                imageVector = if (netWorthExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                                contentDescription = if (netWorthExpanded) "Collapse" else "Expand",
-                            )
-                        }
-                    },
-                ) {
-                    AnimatedVisibility(visible = netWorthExpanded) {
-                        val snapshot = state.latestSnapshot
-                        if (snapshot == null) {
-                            NetWorthEmptyState()
-                        } else {
+                val snapshot = state.latestSnapshot
+                if (snapshot == null) {
+                    SectionEmptyState(
+                        message = "No net worth snapshot yet",
+                        description = "Track your assets and liabilities to see your net worth.",
+                        actionText = "Add a snapshot",
+                        onAction = onNavigateToNetWorth,
+                    )
+                } else {
+                    var netWorthExpanded by remember { mutableStateOf(false) }
+                    SectionCard(
+                        title = "Net Worth",
+                        showContentGap = netWorthExpanded,
+                        trailing = {
+                            IconButton(onClick = { netWorthExpanded = !netWorthExpanded }) {
+                                Icon(
+                                    imageVector = if (netWorthExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                                    contentDescription = if (netWorthExpanded) "Collapse" else "Expand",
+                                )
+                            }
+                        },
+                    ) {
+                        AnimatedVisibility(visible = netWorthExpanded) {
                             NetWorthContent(
                                 snapshot = snapshot,
                                 previousSnapshot = state.previousSnapshot,
@@ -385,6 +409,7 @@ fun HomeScreen(
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
+            }
             }
         }
     }
@@ -726,32 +751,49 @@ private fun IncomeExpensesChart(
 }
 
 @Composable
-private fun NetWorthEmptyState() {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
-            .padding(vertical = 32.dp, horizontal = 16.dp),
-        contentAlignment = Alignment.Center,
+private fun SectionEmptyState(
+    message: String,
+    description: String? = null,
+    actionText: String? = null,
+    onAction: (() -> Unit)? = null,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
     ) {
         Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 20.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             Text(
-                text = "No net worth snapshot yet",
-                style = MaterialTheme.typography.bodySmall,
+                text = message,
+                style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = MaterialTheme.colorScheme.onSurface,
                 textAlign = TextAlign.Center,
             )
-            Text(
-                text = "Track your assets and liabilities to see your net worth.",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                textAlign = TextAlign.Center,
-            )
+            if (description != null) {
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                )
+            }
+            if (actionText != null && onAction != null) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = actionText,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.clickable { onAction() },
+                )
+            }
         }
     }
 }

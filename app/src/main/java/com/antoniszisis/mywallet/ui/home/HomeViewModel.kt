@@ -13,6 +13,7 @@ import com.antoniszisis.mywallet.graphql.HealthQuery
 import com.apollographql.apollo.ApolloClient
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -20,6 +21,7 @@ import javax.inject.Inject
 
 data class HomeUiState(
     val isLoading: Boolean = true,
+    val isRefreshing: Boolean = false,
     val error: String? = null,
     val serverHealthy: Boolean? = null,
     val reportsSummary: GetReportsSummaryQuery.Reports? = null,
@@ -47,40 +49,51 @@ class HomeViewModel @Inject constructor(
         loadDashboard()
     }
 
+    fun refresh() {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isRefreshing = true)
+            fetchDashboardData()
+            _uiState.value = _uiState.value.copy(isRefreshing = false)
+        }
+    }
+
     fun loadDashboard() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-
-            val healthDeferred = async {
-                try {
-                    val response = apollo.query(HealthQuery()).execute()
-                    response.data?.health != null
-                } catch (e: Exception) {
-                    false
-                }
-            }
-            val summaryDeferred = async { reportRepository.getReportsSummary() }
-            val subscriptionsDeferred = async { subscriptionRepository.getSubscriptions(page = 1, active = true) }
-            val snapshotsDeferred = async { netWorthRepository.getSnapshots(page = 1) }
-            val userDeferred = async { userRepository.getMe() }
-
-            val healthy = healthDeferred.await()
-            val summaryResult = summaryDeferred.await()
-            val subscriptionsResult = subscriptionsDeferred.await()
-            val snapshotsResult = snapshotsDeferred.await()
-            val userResult = userDeferred.await()
-
-            _uiState.value = _uiState.value.copy(
-                isLoading = false,
-                serverHealthy = healthy,
-                reportsSummary = summaryResult.getOrNull(),
-                activeSubscriptions = subscriptionsResult.getOrNull(),
-                latestSnapshot = snapshotsResult.getOrNull()?.items?.firstOrNull(),
-                previousSnapshot = snapshotsResult.getOrNull()?.items?.getOrNull(1),
-                recentSnapshots = snapshotsResult.getOrNull()?.items?.take(6)?.reversed() ?: emptyList(),
-                userFullName = userResult.getOrNull()?.fullName,
-                userEmail = userResult.getOrNull()?.email,
-            )
+            fetchDashboardData()
+            _uiState.value = _uiState.value.copy(isLoading = false)
         }
+    }
+
+    private suspend fun fetchDashboardData() = coroutineScope {
+        val healthDeferred = async {
+            try {
+                val response = apollo.query(HealthQuery()).execute()
+                response.data?.health != null
+            } catch (e: Exception) {
+                false
+            }
+        }
+        val summaryDeferred = async { reportRepository.getReportsSummary() }
+        val subscriptionsDeferred = async { subscriptionRepository.getSubscriptions(page = 1, active = true) }
+        val snapshotsDeferred = async { netWorthRepository.getSnapshots(page = 1) }
+        val userDeferred = async { userRepository.getMe() }
+
+        val healthy = healthDeferred.await()
+        val summaryResult = summaryDeferred.await()
+        val subscriptionsResult = subscriptionsDeferred.await()
+        val snapshotsResult = snapshotsDeferred.await()
+        val userResult = userDeferred.await()
+
+        _uiState.value = _uiState.value.copy(
+            serverHealthy = healthy,
+            reportsSummary = summaryResult.getOrNull(),
+            activeSubscriptions = subscriptionsResult.getOrNull(),
+            latestSnapshot = snapshotsResult.getOrNull()?.items?.firstOrNull(),
+            previousSnapshot = snapshotsResult.getOrNull()?.items?.getOrNull(1),
+            recentSnapshots = snapshotsResult.getOrNull()?.items?.take(6)?.reversed() ?: emptyList(),
+            userFullName = userResult.getOrNull()?.fullName,
+            userEmail = userResult.getOrNull()?.email,
+        )
     }
 }

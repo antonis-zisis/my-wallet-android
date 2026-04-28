@@ -47,6 +47,15 @@ fun AppNavGraph(
                 onNavigateToNetWorthDetail = { snapshotId ->
                     navController.navigate(Screen.NetWorthDetail.createRoute(snapshotId))
                 },
+                onNavigateToSubscriptions = {
+                    navController.navigate(Screen.Subscriptions.route)
+                },
+                onNavigateToNetWorth = {
+                    navController.navigate(Screen.NetWorth.route)
+                },
+                onNavigateToReports = {
+                    navController.navigate(Screen.Reports.route)
+                },
             )
         }
 
