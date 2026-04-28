@@ -10,14 +10,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBalance
-import androidx.compose.material.icons.filled.CreditCard
-import androidx.compose.material.icons.filled.Dashboard
+import androidx.compose.material.icons.filled.Subscriptions
 import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.outlined.AccountBalance
-import androidx.compose.material.icons.outlined.CreditCard
-import androidx.compose.material.icons.outlined.Dashboard
+import androidx.compose.material.icons.outlined.Subscriptions
 import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -131,9 +131,9 @@ fun MyWalletApp(
     val bottomNavItems = listOf(
         BottomNavItem(
             route = Screen.Home.route,
-            label = "Dashboard",
-            selectedIcon = Icons.Filled.Dashboard,
-            unselectedIcon = Icons.Outlined.Dashboard,
+            label = "Overview",
+            selectedIcon = Icons.Filled.Home,
+            unselectedIcon = Icons.Outlined.Home,
         ),
         BottomNavItem(
             route = Screen.Reports.route,
@@ -144,8 +144,8 @@ fun MyWalletApp(
         BottomNavItem(
             route = Screen.Subscriptions.route,
             label = "Subs",
-            selectedIcon = Icons.Filled.CreditCard,
-            unselectedIcon = Icons.Outlined.CreditCard,
+            selectedIcon = Icons.Filled.Subscriptions,
+            unselectedIcon = Icons.Outlined.Subscriptions,
         ),
         BottomNavItem(
             route = Screen.NetWorth.route,
