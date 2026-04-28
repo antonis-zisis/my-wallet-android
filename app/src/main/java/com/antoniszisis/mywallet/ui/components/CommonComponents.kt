@@ -105,6 +105,7 @@ fun EmptyState(
 fun SectionCard(
     title: String,
     modifier: Modifier = Modifier,
+    titleTrailing: @Composable (() -> Unit)? = null,
     trailing: @Composable (() -> Unit)? = null,
     showContentGap: Boolean = true,
     content: @Composable () -> Unit,
@@ -122,10 +123,16 @@ fun SectionCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium,
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                    titleTrailing?.invoke()
+                }
                 trailing?.invoke()
             }
             if (showContentGap) Spacer(modifier = Modifier.height(12.dp))

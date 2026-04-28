@@ -10,12 +10,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBalance
-import androidx.compose.material.icons.filled.CreditCard
+import androidx.compose.material.icons.filled.Subscriptions
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.outlined.AccountBalance
-import androidx.compose.material.icons.outlined.CreditCard
+import androidx.compose.material.icons.outlined.Subscriptions
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Person
@@ -144,8 +144,8 @@ fun MyWalletApp(
         BottomNavItem(
             route = Screen.Subscriptions.route,
             label = "Subs",
-            selectedIcon = Icons.Filled.CreditCard,
-            unselectedIcon = Icons.Outlined.CreditCard,
+            selectedIcon = Icons.Filled.Subscriptions,
+            unselectedIcon = Icons.Outlined.Subscriptions,
         ),
         BottomNavItem(
             route = Screen.NetWorth.route,
