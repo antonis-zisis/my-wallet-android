@@ -338,87 +338,47 @@ fun HomeScreen(
                     }
                 }
 
-                // Net worth latest snapshot
-                val snapshot = state.latestSnapshot
-                if (snapshot != null) {
-                    Row(
-                        modifier = Modifier.padding(top = 16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.AccountBalance,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Text(
-                            text = "Net Worth",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onNavigateToNetWorthDetail(snapshot.id) },
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surface,
-                        ),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Text(
-                                    "Net Worth",
-                                    style = MaterialTheme.typography.titleMedium,
-                                )
-                                Text(
-                                    text = formatMoney(snapshot.netWorth),
-                                    style = MaterialTheme.typography.titleLarge,
-                                    fontWeight = FontWeight.Bold,
-                                    color = netWorthColor(snapshot.netWorth >= 0),
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                            ) {
-                                Column {
-                                    Text(
-                                        "Assets",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                    Text(
-                                        formatMoney(snapshot.totalAssets),
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = incomeColor(),
-                                    )
-                                }
-                                Column(horizontalAlignment = Alignment.End) {
-                                    Text(
-                                        "Liabilities",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                    Text(
-                                        formatMoney(snapshot.totalLiabilities),
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = expenseColor(),
-                                    )
-                                }
-                            }
-                            Text(
-                                text = snapshot.title,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(top = 4.dp),
+                // Net worth section
+                Row(
+                    modifier = Modifier.padding(top = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.AccountBalance,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        text = "Net Worth",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                var netWorthExpanded by remember { mutableStateOf(false) }
+                SectionCard(
+                    title = "Net Worth",
+                    showContentGap = netWorthExpanded,
+                    trailing = {
+                        IconButton(onClick = { netWorthExpanded = !netWorthExpanded }) {
+                            Icon(
+                                imageVector = if (netWorthExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                                contentDescription = if (netWorthExpanded) "Collapse" else "Expand",
+                            )
+                        }
+                    },
+                ) {
+                    AnimatedVisibility(visible = netWorthExpanded) {
+                        val snapshot = state.latestSnapshot
+                        if (snapshot == null) {
+                            NetWorthEmptyState()
+                        } else {
+                            NetWorthContent(
+                                snapshot = snapshot,
+                                previousSnapshot = state.previousSnapshot,
+                                recentSnapshots = state.recentSnapshots,
+                                onNavigateToDetail = { onNavigateToNetWorthDetail(snapshot.id) },
                             )
                         }
                     }
@@ -762,6 +722,170 @@ private fun IncomeExpensesChart(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun NetWorthEmptyState() {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+            .padding(vertical = 32.dp, horizontal = 16.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Text(
+                text = "No net worth snapshot yet",
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+            Text(
+                text = "Track your assets and liabilities to see your net worth.",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                textAlign = TextAlign.Center,
+            )
+        }
+    }
+}
+
+@Composable
+private fun NetWorthContent(
+    snapshot: com.antoniszisis.mywallet.graphql.GetNetWorthSnapshotsQuery.Item,
+    previousSnapshot: com.antoniszisis.mywallet.graphql.GetNetWorthSnapshotsQuery.Item?,
+    recentSnapshots: List<com.antoniszisis.mywallet.graphql.GetNetWorthSnapshotsQuery.Item>,
+    onNavigateToDetail: () -> Unit,
+) {
+    val isPositive = snapshot.netWorth >= 0
+    val delta = previousSnapshot?.let { snapshot.netWorth - it.netWorth }
+    val deltaIsPositive = delta != null && delta >= 0
+    val deltaColor = if (deltaIsPositive) incomeColor() else expenseColor()
+
+    val daysAgo = daysSince(snapshot.createdAt)
+    val isStale = daysAgo > 45
+    val stalenessText = when (daysAgo) {
+        0 -> "Last updated today"
+        1 -> "Last updated yesterday"
+        else -> "Last updated $daysAgo days ago"
+    }
+    val stalenessColor = if (isStale) Color(0xFFF97316) else MaterialTheme.colorScheme.onSurfaceVariant
+
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        // Title + date
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = snapshot.title,
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.clickable { onNavigateToDetail() },
+            )
+            Text(
+                text = formatDate(snapshot.createdAt),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
+        // Big net worth value
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(
+                text = formatMoney(snapshot.netWorth),
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                color = netWorthColor(isPositive),
+            )
+            if (previousSnapshot != null && delta != null) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    Icon(
+                        imageVector = if (deltaIsPositive) Icons.Default.ArrowUpward else Icons.Default.ArrowDownward,
+                        contentDescription = null,
+                        tint = deltaColor,
+                        modifier = Modifier.size(14.dp),
+                    )
+                    Text(
+                        text = "${if (deltaIsPositive) "+" else "-"}${formatMoney(kotlin.math.abs(delta))} since ${previousSnapshot.title}",
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Medium,
+                        color = deltaColor,
+                    )
+                }
+            }
+        }
+
+        // Sparkline
+        if (recentSnapshots.size >= 2) {
+            NetWorthSparkline(snapshots = recentSnapshots, isPositive = isPositive)
+        }
+
+        // Staleness
+        Text(
+            text = if (isStale) "$stalenessText — time for a new snapshot?" else stalenessText,
+            style = MaterialTheme.typography.labelSmall,
+            color = stalenessColor,
+        )
+    }
+}
+
+@Composable
+private fun NetWorthSparkline(
+    snapshots: List<com.antoniszisis.mywallet.graphql.GetNetWorthSnapshotsQuery.Item>,
+    isPositive: Boolean,
+) {
+    val lineColor = if (isPositive) incomeColor() else expenseColor()
+    val values = snapshots.map { it.netWorth.toFloat() }
+    val minVal = values.min()
+    val maxVal = values.max()
+    val range = (maxVal - minVal).takeIf { it > 0f } ?: 1f
+
+    Canvas(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(48.dp),
+    ) {
+        val xStep = if (values.size > 1) size.width / (values.size - 1) else size.width
+        val points = values.mapIndexed { i, v ->
+            val x = i * xStep
+            val y = size.height - ((v - minVal) / range) * (size.height * 0.9f) - (size.height * 0.05f)
+            androidx.compose.ui.geometry.Offset(x, y)
+        }
+        for (i in 0 until points.size - 1) {
+            drawLine(
+                color = lineColor,
+                start = points[i],
+                end = points[i + 1],
+                strokeWidth = 2.dp.toPx(),
+                cap = androidx.compose.ui.graphics.StrokeCap.Round,
+            )
+        }
+    }
+}
+
+private fun daysSince(dateString: String): Int {
+    return try {
+        val millis = if (dateString.all { it.isDigit() }) {
+            dateString.toLong()
+        } else {
+            java.time.Instant.parse(dateString).toEpochMilli()
+        }
+        val diffMs = System.currentTimeMillis() - millis
+        maxOf(0, (diffMs / (1000L * 60 * 60 * 24)).toInt())
+    } catch (_: Exception) {
+        0
     }
 }
 

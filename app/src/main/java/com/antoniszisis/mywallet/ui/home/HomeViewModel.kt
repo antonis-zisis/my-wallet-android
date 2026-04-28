@@ -25,6 +25,8 @@ data class HomeUiState(
     val reportsSummary: GetReportsSummaryQuery.Reports? = null,
     val activeSubscriptions: GetSubscriptionsQuery.Subscriptions? = null,
     val latestSnapshot: GetNetWorthSnapshotsQuery.Item? = null,
+    val previousSnapshot: GetNetWorthSnapshotsQuery.Item? = null,
+    val recentSnapshots: List<GetNetWorthSnapshotsQuery.Item> = emptyList(),
     val userFullName: String? = null,
     val userEmail: String? = null,
 )
@@ -74,6 +76,8 @@ class HomeViewModel @Inject constructor(
                 reportsSummary = summaryResult.getOrNull(),
                 activeSubscriptions = subscriptionsResult.getOrNull(),
                 latestSnapshot = snapshotsResult.getOrNull()?.items?.firstOrNull(),
+                previousSnapshot = snapshotsResult.getOrNull()?.items?.getOrNull(1),
+                recentSnapshots = snapshotsResult.getOrNull()?.items?.take(6)?.reversed() ?: emptyList(),
                 userFullName = userResult.getOrNull()?.fullName,
                 userEmail = userResult.getOrNull()?.email,
             )
