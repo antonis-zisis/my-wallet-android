@@ -91,15 +91,25 @@ fun ReportDetailScreen(
                             modifier = Modifier.fillMaxWidth(),
                         )
                     } else {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(state.report?.title ?: "Report")
-                            if (state.report?.isLocked == true) {
-                                Spacer(modifier = Modifier.size(8.dp))
-                                Icon(
-                                    Icons.Default.Lock,
-                                    contentDescription = "Locked",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(18.dp),
+                        Column {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(state.report?.title ?: "Report")
+                                if (state.report?.isLocked == true) {
+                                    Spacer(modifier = Modifier.size(8.dp))
+                                    Icon(
+                                        Icons.Default.Lock,
+                                        contentDescription = "Locked",
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(18.dp),
+                                    )
+                                }
+                            }
+                            val report = state.report
+                            if (report != null) {
+                                Text(
+                                    text = "Created ${formatDate(report.createdAt)} · Updated ${formatDate(report.updatedAt)}",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
                         }
@@ -170,6 +180,9 @@ fun ReportDetailScreen(
                         }
                     }
                 },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                ),
                 scrollBehavior = scrollBehavior,
             )
         },
@@ -201,28 +214,33 @@ fun ReportDetailScreen(
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    // Summary card
+                    // Summary cards
                     item {
-                        Card(
+                        Row(
                             modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.surface,
-                            ),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(16.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                            ) {
-                                SummaryItem("Income", formatMoney(income), incomeColor())
-                                SummaryItem("Expenses", formatMoney(expenses), expenseColor())
-                                SummaryItem(
-                                    "Net Balance",
-                                    formatMoney(net),
-                                    if (net >= 0) incomeColor() else expenseColor(),
-                                )
+                            listOf(
+                                Triple("Income", formatMoney(income), incomeColor()),
+                                Triple("Expenses", formatMoney(expenses), expenseColor()),
+                                Triple("Net Balance", (if (net >= 0) "+" else "") + formatMoney(net), if (net >= 0) incomeColor() else expenseColor()),
+                            ).forEach { (label, value, color) ->
+                                Card(
+                                    modifier = Modifier.weight(1f),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.surface,
+                                    ),
+                                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                                ) {
+                                    SummaryItem(
+                                        label = label,
+                                        value = value,
+                                        color = color,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(12.dp),
+                                    )
+                                }
                             }
                         }
                     }
@@ -313,8 +331,13 @@ fun ReportDetailScreen(
 }
 
 @Composable
-private fun SummaryItem(label: String, value: String, color: androidx.compose.ui.graphics.Color) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+private fun SummaryItem(
+    label: String,
+    value: String,
+    color: androidx.compose.ui.graphics.Color,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
             text = value,
             style = MaterialTheme.typography.titleSmall,
