@@ -40,6 +40,7 @@ data class ReportDetailUiState(
     val isDeletingReport: Boolean = false,
     val transactionToDelete: GetReportQuery.Transaction? = null,
     val isDeletingTransaction: Boolean = false,
+    val selectedCategory: String? = null,
 )
 
 val EXPENSE_CATEGORIES = listOf(
@@ -60,6 +61,8 @@ val EXPENSE_CATEGORIES = listOf(
 val INCOME_CATEGORIES = listOf(
     "Salary", "Freelance", "Investment", "Gift", "Other"
 )
+
+val ORDERED_CATEGORIES: List<String> = (EXPENSE_CATEGORIES + INCOME_CATEGORIES).distinct()
 
 @HiltViewModel
 class ReportDetailViewModel @Inject constructor(
@@ -318,6 +321,10 @@ class ReportDetailViewModel @Inject constructor(
 
     fun dismissDeleteReport() {
         _uiState.value = _uiState.value.copy(showDeleteReport = false)
+    }
+
+    fun onCategoryFilterChange(category: String?) {
+        _uiState.value = _uiState.value.copy(selectedCategory = category)
     }
 
     fun deleteReport(onDeleted: () -> Unit) {
