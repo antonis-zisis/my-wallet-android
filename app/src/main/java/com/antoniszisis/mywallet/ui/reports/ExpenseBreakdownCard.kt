@@ -47,14 +47,14 @@ import kotlin.math.PI
 import kotlin.math.atan2
 import kotlin.math.sqrt
 
-data class ExpenseChartSegment(
-    val category: String,
+data class ChartSegment(
+    val label: String,
     val amount: Double,
     val percentage: Float,
     val color: Color,
 )
 
-fun computeExpenseSegments(transactions: List<GetReportQuery.Transaction>): List<ExpenseChartSegment> {
+fun computeExpenseSegments(transactions: List<GetReportQuery.Transaction>): List<ChartSegment> {
     val expensesByCategory = mutableMapOf<String, Double>()
     for (tx in transactions) {
         if (tx.type.rawValue != "EXPENSE") continue
@@ -65,15 +65,15 @@ fun computeExpenseSegments(transactions: List<GetReportQuery.Transaction>): List
 
     return expensesByCategory.entries
         .map { (category, amount) ->
-            ExpenseChartSegment(
-                category = category,
+            ChartSegment(
+                label = category,
                 amount = amount,
                 percentage = (amount / total).toFloat(),
                 color = CategoryColors.forExpense(category),
             )
         }
         .sortedBy { seg ->
-            val idx = EXPENSE_CATEGORIES.indexOf(seg.category)
+            val idx = EXPENSE_CATEGORIES.indexOf(seg.label)
             if (idx == -1) Int.MAX_VALUE else idx
         }
 }
@@ -89,6 +89,25 @@ fun ExpenseBreakdownCard(
 
     if (segments.isEmpty()) return
 
+    BreakdownCard(
+        title = "Expense Breakdown",
+        segments = segments,
+        isExpanded = isExpanded,
+        chevronRotation = chevronRotation,
+        onToggle = { isExpanded = !isExpanded },
+        modifier = modifier,
+    )
+}
+
+@Composable
+internal fun BreakdownCard(
+    title: String,
+    segments: List<ChartSegment>,
+    isExpanded: Boolean,
+    chevronRotation: Float,
+    onToggle: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     Card(
         modifier = modifier,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -98,13 +117,13 @@ fun ExpenseBreakdownCard(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { isExpanded = !isExpanded }
+                    .clickable(onClick = onToggle)
                     .padding(16.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    "Expense Breakdown",
+                    title,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                 )
@@ -128,7 +147,7 @@ fun ExpenseBreakdownCard(
                             .height(200.dp),
                     )
                     Spacer(modifier = Modifier.height(16.dp))
-                    ExpenseLegend(segments = segments)
+                    BreakdownLegend(segments = segments)
                 }
             }
         }
@@ -136,8 +155,8 @@ fun ExpenseBreakdownCard(
 }
 
 @Composable
-private fun DonutChart(
-    segments: List<ExpenseChartSegment>,
+internal fun DonutChart(
+    segments: List<ChartSegment>,
     modifier: Modifier = Modifier,
 ) {
     var selectedIndex by remember { mutableStateOf<Int?>(null) }
@@ -217,7 +236,7 @@ private fun DonutChart(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Text(
-                    text = sel.category,
+                    text = sel.label,
                     style = MaterialTheme.typography.labelSmall,
                     color = sel.color,
                     fontWeight = FontWeight.Medium,
@@ -238,8 +257,8 @@ private fun DonutChart(
 }
 
 @Composable
-private fun ExpenseLegend(
-    segments: List<ExpenseChartSegment>,
+internal fun BreakdownLegend(
+    segments: List<ChartSegment>,
     modifier: Modifier = Modifier,
 ) {
     val rows = segments.chunked(2)
@@ -262,7 +281,7 @@ private fun ExpenseLegend(
                         )
                         Column {
                             Text(
-                                text = seg.category,
+                                text = seg.label,
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.Medium,
                             )

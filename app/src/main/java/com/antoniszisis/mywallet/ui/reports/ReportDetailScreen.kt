@@ -259,6 +259,14 @@ fun ReportDetailScreen(
                         )
                     }
 
+                    // Budget breakdown chart
+                    item {
+                        BudgetBreakdownCard(
+                            transactions = report.transactions,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+
                     // Transactions header
                     item {
                         Row(
