@@ -8,6 +8,8 @@ query GetReports($page: Int, $pageSize: Int) {
       updatedAt
       transactions {
         id
+        type
+        amount
       }
     }
     totalCount

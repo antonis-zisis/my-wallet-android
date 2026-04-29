@@ -48,6 +48,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.antoniszisis.mywallet.ui.components.EmptyState
 import com.antoniszisis.mywallet.ui.components.ErrorMessage
 import com.antoniszisis.mywallet.ui.components.LoadingScreen
+import com.antoniszisis.mywallet.graphql.type.TransactionType
+import com.antoniszisis.mywallet.ui.theme.incomeColor
+import com.antoniszisis.mywallet.util.formatMoney
 import com.antoniszisis.mywallet.util.formatRelativeTime
 import kotlinx.coroutines.flow.distinctUntilChanged
 
@@ -151,13 +154,23 @@ fun ReportsScreen(
                                             verticalAlignment = Alignment.CenterVertically,
                                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                                         ) {
-                                            if (report.isLocked) {
-                                                Icon(
-                                                    Icons.Default.Lock,
-                                                    contentDescription = "Locked",
-                                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                    modifier = Modifier.size(16.dp),
-                                                )
+                                            val net = report.transactions.sumOf {
+                                                if (it.type == TransactionType.INCOME) it.amount else -it.amount
+                                            }
+                                            Text(
+                                                text = if (net >= 0) "+${formatMoney(net)}" else formatMoney(net),
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = if (net >= 0) incomeColor() else MaterialTheme.colorScheme.error,
+                                            )
+                                            Box(modifier = Modifier.size(16.dp)) {
+                                                if (report.isLocked) {
+                                                    Icon(
+                                                        Icons.Default.Lock,
+                                                        contentDescription = "Locked",
+                                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                        modifier = Modifier.size(16.dp),
+                                                    )
+                                                }
                                             }
                                             Icon(
                                                 Icons.Default.ChevronRight,
