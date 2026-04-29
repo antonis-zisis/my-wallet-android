@@ -138,8 +138,10 @@ fun ReportsScreen(
                                 ListItem(
                                     headlineContent = { Text(report.title) },
                                     supportingContent = {
+                                        val count = report.transactions.size
+                                        val countLabel = if (count == 1) "1 transaction" else "$count transactions"
                                         Text(
-                                            text = formatRelativeTime(report.updatedAt),
+                                            text = "$countLabel · ${formatRelativeTime(report.updatedAt)}",
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
