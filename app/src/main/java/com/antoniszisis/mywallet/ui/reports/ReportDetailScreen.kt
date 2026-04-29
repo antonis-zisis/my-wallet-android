@@ -2,6 +2,7 @@ package com.antoniszisis.mywallet.ui.reports
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -10,7 +11,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -25,6 +28,7 @@ import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -267,7 +271,23 @@ fun ReportDetailScreen(
                         )
                     }
 
-                    // Transactions header
+                    // Transactions header + filter bar
+                    val allTransactions = report.transactions
+                    val presentCategories = allTransactions.map { it.category }.toSet()
+                    val categories = ORDERED_CATEGORIES.filter { it in presentCategories } +
+                        presentCategories.subtract(ORDERED_CATEGORIES.toSet()).sorted()
+                    val filteredTransactions = allTransactions
+                        .sortedByDescending { it.date }
+                        .let { sorted ->
+                            val cat = state.selectedCategory
+                            if (cat == null) sorted else sorted.filter { it.category == cat }
+                        }
+                    val filteredIncome = filteredTransactions
+                        .filter { it.type.rawValue == "INCOME" }.sumOf { it.amount }
+                    val filteredExpenses = filteredTransactions
+                        .filter { it.type.rawValue == "EXPENSE" }.sumOf { it.amount }
+                    val filteredNet = filteredIncome - filteredExpenses
+
                     item {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -275,13 +295,21 @@ fun ReportDetailScreen(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(
-                                "Transactions (${report.transactions.size})",
+                                "Transactions (${filteredTransactions.size})",
                                 style = MaterialTheme.typography.titleMedium,
                             )
+                            if (state.selectedCategory != null && filteredTransactions.isNotEmpty()) {
+                                Text(
+                                    text = (if (filteredNet >= 0) "+" else "-") + formatMoney(Math.abs(filteredNet)),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (filteredNet >= 0) incomeColor() else expenseColor(),
+                                )
+                            }
                         }
                     }
 
-                    if (report.transactions.isEmpty()) {
+                    if (allTransactions.isEmpty()) {
                         item {
                             Text(
                                 "No transactions yet",
@@ -290,12 +318,30 @@ fun ReportDetailScreen(
                                 modifier = Modifier.padding(vertical = 16.dp),
                             )
                         }
+                    } else {
+                        if (categories.size > 1) {
+                            item {
+                                CategoryFilterBar(
+                                    categories = categories,
+                                    selectedCategory = state.selectedCategory,
+                                    onSelect = viewModel::onCategoryFilterChange,
+                                )
+                            }
+                        }
+
+                        if (filteredTransactions.isEmpty()) {
+                            item {
+                                Text(
+                                    "No transactions in this category",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(vertical = 16.dp),
+                                )
+                            }
+                        }
                     }
 
-                    items(
-                        report.transactions.sortedByDescending { it.date },
-                        key = { it.id }
-                    ) { tx ->
+                    items(filteredTransactions, key = { it.id }) { tx ->
                         TransactionRow(
                             transaction = tx,
                             isLocked = report.isLocked,
@@ -349,6 +395,50 @@ fun ReportDetailScreen(
             isLoading = state.isDeletingReport,
             onConfirm = { viewModel.deleteReport(onNavigateBack) },
             onDismiss = viewModel::dismissDeleteReport,
+        )
+    }
+}
+
+@Composable
+private fun CategoryFilterBar(
+    categories: List<String>,
+    selectedCategory: String?,
+    onSelect: (String?) -> Unit,
+) {
+    LazyRow(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        contentPadding = PaddingValues(horizontal = 1.dp),
+    ) {
+        item {
+            FilterPill(title = "All", isSelected = selectedCategory == null, onClick = { onSelect(null) })
+        }
+        items(categories) { category ->
+            FilterPill(
+                title = category,
+                isSelected = selectedCategory == category,
+                onClick = { onSelect(if (selectedCategory == category) null else category) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun FilterPill(
+    title: String,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+) {
+    Surface(
+        onClick = onClick,
+        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+        contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+        shape = RoundedCornerShape(4.dp),
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
         )
     }
 }

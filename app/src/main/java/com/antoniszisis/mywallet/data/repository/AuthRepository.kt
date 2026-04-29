@@ -1,6 +1,7 @@
 package com.antoniszisis.mywallet.data.repository
 
 import com.antoniszisis.mywallet.data.remote.SupabaseAuthService
+import kotlinx.coroutines.flow.SharedFlow
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -8,6 +9,8 @@ import javax.inject.Singleton
 class AuthRepository @Inject constructor(
     private val authService: SupabaseAuthService,
 ) {
+    val sessionExpired: SharedFlow<Unit> = authService.sessionExpired
+
     fun isLoggedIn(): Boolean = authService.isLoggedIn()
 
     suspend fun tryRestoreSession(): Boolean = authService.tryRestoreSession()

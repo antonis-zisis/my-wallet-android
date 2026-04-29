@@ -6,7 +6,12 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.antoniszisis.mywallet.BuildConfig
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -33,6 +38,29 @@ class SupabaseAuthService @Inject constructor(
 
     var currentSession: AuthSession? = null
         private set
+
+    private val _sessionExpired = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val sessionExpired: SharedFlow<Unit> = _sessionExpired.asSharedFlow()
+
+    private val refreshMutex = Mutex()
+
+    suspend fun refreshCurrentSession(): Result<Unit> = refreshMutex.withLock {
+        val token = currentSession?.refreshToken
+            ?: return@withLock Result.failure(Exception("No active session"))
+        val result = refreshSession(token)
+        result.fold(
+            onSuccess = { session ->
+                currentSession = session
+                saveSession(session)
+            },
+            onFailure = {
+                currentSession = null
+                clearPersistedSession()
+                _sessionExpired.tryEmit(Unit)
+            }
+        )
+        result.map { }
+    }
 
     suspend fun signIn(email: String, password: String): Result<AuthSession> =
         withContext(Dispatchers.IO) {

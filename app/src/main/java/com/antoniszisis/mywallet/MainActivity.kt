@@ -26,6 +26,7 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -37,6 +38,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -48,7 +50,10 @@ import com.antoniszisis.mywallet.ui.navigation.Screen
 import com.antoniszisis.mywallet.ui.theme.MyWalletTheme
 import com.antoniszisis.mywallet.ui.theme.ThemeMode
 import dagger.hilt.android.AndroidEntryPoint
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.launch
+import androidx.hilt.navigation.compose.hiltViewModel
 import javax.inject.Inject
 
 data class BottomNavItem(
@@ -118,13 +123,29 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+@HiltViewModel
+class AppViewModel @Inject constructor(
+    authRepository: AuthRepository,
+) : ViewModel() {
+    val sessionExpired: SharedFlow<Unit> = authRepository.sessionExpired
+}
+
 @Composable
 fun MyWalletApp(
     startDestination: String,
     themeMode: ThemeMode,
     onThemeModeChange: (ThemeMode) -> Unit,
+    appViewModel: AppViewModel = hiltViewModel(),
 ) {
     val navController = rememberNavController()
+
+    LaunchedEffect(Unit) {
+        appViewModel.sessionExpired.collect {
+            navController.navigate(Screen.Login.route) {
+                popUpTo(0) { inclusive = true }
+            }
+        }
+    }
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
 
