@@ -1,5 +1,7 @@
 package com.antoniszisis.mywallet.ui.reports
 
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -216,29 +218,27 @@ fun ReportsScreen(
                         label = { Text("Report title") },
                         isError = state.createError != null,
                         singleLine = true,
-                        supportingText = {
-                            androidx.compose.foundation.layout.Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                            ) {
-                                Text(
-                                    text = state.createError ?: "Between 3–$MAX_REPORT_TITLE_LENGTH characters",
-                                    color = if (state.createError != null) {
-                                        MaterialTheme.colorScheme.error
-                                    } else {
-                                        MaterialTheme.colorScheme.onSurfaceVariant
-                                    },
-                                    style = MaterialTheme.typography.bodySmall,
-                                )
-                                Text(
-                                    text = "${state.createTitle.length}/$MAX_REPORT_TITLE_LENGTH",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                        },
                         modifier = Modifier.fillMaxWidth(),
                     )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Text(
+                            text = state.createError ?: "Between 3–$MAX_REPORT_TITLE_LENGTH characters",
+                            color = if (state.createError != null) {
+                                MaterialTheme.colorScheme.error
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                        Text(
+                            text = "${state.createTitle.length}/$MAX_REPORT_TITLE_LENGTH",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
             },
             confirmButton = {
@@ -247,6 +247,7 @@ fun ReportsScreen(
                 Button(
                     onClick = { viewModel.createReport(onNavigateToDetail) },
                     enabled = !state.isCreating && isValid,
+                    shape = RoundedCornerShape(4.dp),
                 ) {
                     if (state.isCreating) {
                         CircularProgressIndicator(modifier = Modifier.padding(horizontal = 8.dp))
@@ -259,6 +260,7 @@ fun ReportsScreen(
                 TextButton(
                     onClick = viewModel::dismissCreateDialog,
                     enabled = !state.isCreating,
+                    shape = RoundedCornerShape(4.dp),
                 ) {
                     Text("Cancel")
                 }
