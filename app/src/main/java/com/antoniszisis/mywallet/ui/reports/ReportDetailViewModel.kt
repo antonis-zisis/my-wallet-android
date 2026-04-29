@@ -27,6 +27,7 @@ data class TransactionFormState(
 
 data class ReportDetailUiState(
     val isLoading: Boolean = true,
+    val isRefreshing: Boolean = false,
     val error: String? = null,
     val report: GetReportQuery.Report? = null,
     val isEditingTitle: Boolean = false,
@@ -90,6 +91,27 @@ class ReportDetailViewModel @Inject constructor(
                 onFailure = { e ->
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
+                        error = e.message ?: "Failed to load report",
+                    )
+                }
+            )
+        }
+    }
+
+    fun refresh() {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isRefreshing = true, error = null)
+            reportRepository.getReport(reportId).fold(
+                onSuccess = { report ->
+                    _uiState.value = _uiState.value.copy(
+                        isRefreshing = false,
+                        report = report,
+                        editedTitle = report.title,
+                    )
+                },
+                onFailure = { e ->
+                    _uiState.value = _uiState.value.copy(
+                        isRefreshing = false,
                         error = e.message ?: "Failed to load report",
                     )
                 }

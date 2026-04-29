@@ -1,5 +1,7 @@
 package com.antoniszisis.mywallet.ui.reports
 
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -30,6 +32,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -46,6 +50,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.antoniszisis.mywallet.ui.components.EmptyState
 import com.antoniszisis.mywallet.ui.components.ErrorMessage
 import com.antoniszisis.mywallet.ui.components.LoadingScreen
+import com.antoniszisis.mywallet.graphql.type.TransactionType
+import com.antoniszisis.mywallet.ui.theme.incomeColor
+import com.antoniszisis.mywallet.util.formatMoney
 import com.antoniszisis.mywallet.util.formatRelativeTime
 import kotlinx.coroutines.flow.distinctUntilChanged
 
@@ -61,7 +68,7 @@ fun ReportsScreen(
     LaunchedEffect(lifecycle) {
         lifecycle.currentStateFlow.collect { lifecycleState ->
             if (lifecycleState == Lifecycle.State.RESUMED) {
-                viewModel.refresh()
+                viewModel.refresh(silent = true)
             }
         }
     }
@@ -86,6 +93,9 @@ fun ReportsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                ),
                 title = {
                     Column {
                         Text("Reports")
@@ -119,55 +129,73 @@ fun ReportsScreen(
                 )
                 state.reports.isEmpty() -> EmptyState("No reports yet. Create your first one!")
                 else -> {
-                    LazyColumn(
-                        state = listState,
+                    PullToRefreshBox(
+                        isRefreshing = state.isRefreshing,
+                        onRefresh = viewModel::refresh,
                         modifier = Modifier.weight(1f),
-                        contentPadding = PaddingValues(vertical = 16.dp),
                     ) {
-                        items(state.reports, key = { it.id }) { report ->
-                            ListItem(
-                                headlineContent = { Text(report.title) },
-                                supportingContent = {
-                                    Text(
-                                        text = formatRelativeTime(report.updatedAt),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                },
-                                trailingContent = {
-                                    androidx.compose.foundation.layout.Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                    ) {
-                                        if (report.isLocked) {
+                        LazyColumn(
+                            state = listState,
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(vertical = 16.dp),
+                        ) {
+                            items(state.reports, key = { it.id }) { report ->
+                                ListItem(
+                                    headlineContent = { Text(report.title) },
+                                    supportingContent = {
+                                        val count = report.transactions.size
+                                        val countLabel = if (count == 1) "1 transaction" else "$count transactions"
+                                        Text(
+                                            text = "$countLabel · ${formatRelativeTime(report.updatedAt)}",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    },
+                                    trailingContent = {
+                                        androidx.compose.foundation.layout.Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        ) {
+                                            val net = report.transactions.sumOf {
+                                                if (it.type == TransactionType.INCOME) it.amount else -it.amount
+                                            }
+                                            Text(
+                                                text = if (net >= 0) "+${formatMoney(net)}" else formatMoney(net),
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = if (net >= 0) incomeColor() else MaterialTheme.colorScheme.error,
+                                            )
+                                            Box(modifier = Modifier.size(16.dp)) {
+                                                if (report.isLocked) {
+                                                    Icon(
+                                                        Icons.Default.Lock,
+                                                        contentDescription = "Locked",
+                                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                        modifier = Modifier.size(16.dp),
+                                                    )
+                                                }
+                                            }
                                             Icon(
-                                                Icons.Default.Lock,
-                                                contentDescription = "Locked",
+                                                Icons.Default.ChevronRight,
+                                                contentDescription = null,
                                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                modifier = Modifier.size(16.dp),
                                             )
                                         }
-                                        Icon(
-                                            Icons.Default.ChevronRight,
-                                            contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
-                                    }
-                                },
-                                modifier = Modifier.clickable { onNavigateToDetail(report.id) },
-                            )
-                            HorizontalDivider()
-                        }
+                                    },
+                                    modifier = Modifier.clickable { onNavigateToDetail(report.id) },
+                                )
+                                HorizontalDivider()
+                            }
 
-                        if (state.isLoadingMore) {
-                            item {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(16.dp),
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    CircularProgressIndicator()
+                            if (state.isLoadingMore) {
+                                item {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(16.dp),
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        CircularProgressIndicator()
+                                    }
                                 }
                             }
                         }
@@ -190,29 +218,27 @@ fun ReportsScreen(
                         label = { Text("Report title") },
                         isError = state.createError != null,
                         singleLine = true,
-                        supportingText = {
-                            androidx.compose.foundation.layout.Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                            ) {
-                                Text(
-                                    text = state.createError ?: "Between 3–$MAX_REPORT_TITLE_LENGTH characters",
-                                    color = if (state.createError != null) {
-                                        MaterialTheme.colorScheme.error
-                                    } else {
-                                        MaterialTheme.colorScheme.onSurfaceVariant
-                                    },
-                                    style = MaterialTheme.typography.bodySmall,
-                                )
-                                Text(
-                                    text = "${state.createTitle.length}/$MAX_REPORT_TITLE_LENGTH",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                        },
                         modifier = Modifier.fillMaxWidth(),
                     )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Text(
+                            text = state.createError ?: "Between 3–$MAX_REPORT_TITLE_LENGTH characters",
+                            color = if (state.createError != null) {
+                                MaterialTheme.colorScheme.error
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                        Text(
+                            text = "${state.createTitle.length}/$MAX_REPORT_TITLE_LENGTH",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
             },
             confirmButton = {
@@ -221,6 +247,7 @@ fun ReportsScreen(
                 Button(
                     onClick = { viewModel.createReport(onNavigateToDetail) },
                     enabled = !state.isCreating && isValid,
+                    shape = RoundedCornerShape(4.dp),
                 ) {
                     if (state.isCreating) {
                         CircularProgressIndicator(modifier = Modifier.padding(horizontal = 8.dp))
@@ -233,6 +260,7 @@ fun ReportsScreen(
                 TextButton(
                     onClick = viewModel::dismissCreateDialog,
                     enabled = !state.isCreating,
+                    shape = RoundedCornerShape(4.dp),
                 ) {
                     Text("Cancel")
                 }

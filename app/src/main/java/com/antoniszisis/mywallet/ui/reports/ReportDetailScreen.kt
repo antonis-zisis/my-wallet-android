@@ -43,6 +43,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -91,15 +92,25 @@ fun ReportDetailScreen(
                             modifier = Modifier.fillMaxWidth(),
                         )
                     } else {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(state.report?.title ?: "Report")
-                            if (state.report?.isLocked == true) {
-                                Spacer(modifier = Modifier.size(8.dp))
-                                Icon(
-                                    Icons.Default.Lock,
-                                    contentDescription = "Locked",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(18.dp),
+                        Column {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(state.report?.title ?: "Report")
+                                if (state.report?.isLocked == true) {
+                                    Spacer(modifier = Modifier.size(8.dp))
+                                    Icon(
+                                        Icons.Default.Lock,
+                                        contentDescription = "Locked",
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(18.dp),
+                                    )
+                                }
+                            }
+                            val report = state.report
+                            if (report != null) {
+                                Text(
+                                    text = "Created ${formatDate(report.createdAt)} · Updated ${formatDate(report.updatedAt)}",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
                         }
@@ -170,6 +181,9 @@ fun ReportDetailScreen(
                         }
                     }
                 },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                ),
                 scrollBehavior = scrollBehavior,
             )
         },
@@ -194,37 +208,63 @@ fun ReportDetailScreen(
                 val expenses = report.transactions.filter { it.type.rawValue == "EXPENSE" }.sumOf { it.amount }
                 val net = income - expenses
 
-                LazyColumn(
+                PullToRefreshBox(
+                    isRefreshing = state.isRefreshing,
+                    onRefresh = viewModel::refresh,
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(padding),
+                ) {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    // Summary card
+                    // Summary cards
                     item {
-                        Card(
+                        Row(
                             modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.surface,
-                            ),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(16.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                            ) {
-                                SummaryItem("Income", formatMoney(income), incomeColor())
-                                SummaryItem("Expenses", formatMoney(expenses), expenseColor())
-                                SummaryItem(
-                                    "Net Balance",
-                                    formatMoney(net),
-                                    if (net >= 0) incomeColor() else expenseColor(),
-                                )
+                            listOf(
+                                Triple("Income", formatMoney(income), incomeColor()),
+                                Triple("Expenses", formatMoney(expenses), expenseColor()),
+                                Triple("Net Balance", (if (net >= 0) "+" else "") + formatMoney(net), if (net >= 0) incomeColor() else expenseColor()),
+                            ).forEach { (label, value, color) ->
+                                Card(
+                                    modifier = Modifier.weight(1f),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.surface,
+                                    ),
+                                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                                ) {
+                                    SummaryItem(
+                                        label = label,
+                                        value = value,
+                                        color = color,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(12.dp),
+                                    )
+                                }
                             }
                         }
+                    }
+
+                    // Expense breakdown chart
+                    item {
+                        ExpenseBreakdownCard(
+                            transactions = report.transactions,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+
+                    // Budget breakdown chart
+                    item {
+                        BudgetBreakdownCard(
+                            transactions = report.transactions,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
                     }
 
                     // Transactions header
@@ -265,6 +305,7 @@ fun ReportDetailScreen(
                     }
 
                     item { Spacer(modifier = Modifier.height(72.dp)) }
+                }
                 }
             }
         }
@@ -313,8 +354,13 @@ fun ReportDetailScreen(
 }
 
 @Composable
-private fun SummaryItem(label: String, value: String, color: androidx.compose.ui.graphics.Color) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+private fun SummaryItem(
+    label: String,
+    value: String,
+    color: androidx.compose.ui.graphics.Color,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
             text = value,
             style = MaterialTheme.typography.titleSmall,
@@ -337,6 +383,8 @@ private fun TransactionRow(
     onDelete: () -> Unit,
 ) {
     val isIncome = transaction.type.rawValue == "INCOME"
+    var showMenu by remember { mutableStateOf(false) }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -364,21 +412,35 @@ private fun TransactionRow(
             modifier = Modifier.padding(horizontal = 8.dp),
         )
         if (!isLocked) {
-            IconButton(onClick = onEdit, modifier = Modifier.size(36.dp)) {
-                Icon(
-                    Icons.Default.Edit,
-                    contentDescription = "Edit",
-                    modifier = Modifier.size(18.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            IconButton(onClick = onDelete, modifier = Modifier.size(36.dp)) {
-                Icon(
-                    Icons.Default.Delete,
-                    contentDescription = "Delete",
-                    modifier = Modifier.size(18.dp),
-                    tint = MaterialTheme.colorScheme.error,
-                )
+            androidx.compose.foundation.layout.Box {
+                IconButton(onClick = { showMenu = true }, modifier = Modifier.size(36.dp)) {
+                    Icon(
+                        Icons.Default.MoreVert,
+                        contentDescription = "More options",
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+                DropdownMenu(
+                    expanded = showMenu,
+                    onDismissRequest = { showMenu = false },
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("Edit") },
+                        leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },
+                        onClick = { showMenu = false; onEdit() },
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Delete", color = MaterialTheme.colorScheme.error) },
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.Delete,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.error,
+                            )
+                        },
+                        onClick = { showMenu = false; onDelete() },
+                    )
+                }
             }
         }
     }

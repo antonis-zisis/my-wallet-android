@@ -6,6 +6,11 @@ query GetReports($page: Int, $pageSize: Int) {
       isLocked
       createdAt
       updatedAt
+      transactions {
+        id
+        type
+        amount
+      }
     }
     totalCount
   }
