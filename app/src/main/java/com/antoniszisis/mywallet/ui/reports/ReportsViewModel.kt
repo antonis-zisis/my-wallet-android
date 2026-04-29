@@ -16,6 +16,7 @@ const val MAX_REPORT_TITLE_LENGTH = 100
 
 data class ReportsUiState(
     val isLoading: Boolean = true,
+    val isRefreshing: Boolean = false,
     val isLoadingMore: Boolean = false,
     val error: String? = null,
     val reports: List<GetReportsQuery.Item> = emptyList(),
@@ -40,17 +41,19 @@ class ReportsViewModel @Inject constructor(
         refresh()
     }
 
-    fun refresh() {
+    fun refresh(silent: Boolean = false) {
         viewModelScope.launch {
             val current = _uiState.value
             _uiState.value = current.copy(
-                isLoading = current.reports.isEmpty(),
+                isLoading = !silent && current.reports.isEmpty(),
+                isRefreshing = !silent && current.reports.isNotEmpty(),
                 error = null,
             )
             reportRepository.getReports(page = 1, pageSize = PAGE_SIZE).fold(
                 onSuccess = { data ->
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
+                        isRefreshing = false,
                         reports = data.items,
                         totalCount = data.totalCount,
                         loadedPages = 1,
@@ -60,6 +63,7 @@ class ReportsViewModel @Inject constructor(
                 onFailure = { e ->
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
+                        isRefreshing = false,
                         error = e.message ?: "Failed to load reports",
                     )
                 }

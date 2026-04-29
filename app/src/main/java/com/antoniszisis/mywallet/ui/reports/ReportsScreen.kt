@@ -31,6 +31,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -62,7 +63,7 @@ fun ReportsScreen(
     LaunchedEffect(lifecycle) {
         lifecycle.currentStateFlow.collect { lifecycleState ->
             if (lifecycleState == Lifecycle.State.RESUMED) {
-                viewModel.refresh()
+                viewModel.refresh(silent = true)
             }
         }
     }
@@ -123,55 +124,61 @@ fun ReportsScreen(
                 )
                 state.reports.isEmpty() -> EmptyState("No reports yet. Create your first one!")
                 else -> {
-                    LazyColumn(
-                        state = listState,
+                    PullToRefreshBox(
+                        isRefreshing = state.isRefreshing,
+                        onRefresh = viewModel::refresh,
                         modifier = Modifier.weight(1f),
-                        contentPadding = PaddingValues(vertical = 16.dp),
                     ) {
-                        items(state.reports, key = { it.id }) { report ->
-                            ListItem(
-                                headlineContent = { Text(report.title) },
-                                supportingContent = {
-                                    Text(
-                                        text = formatRelativeTime(report.updatedAt),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                },
-                                trailingContent = {
-                                    androidx.compose.foundation.layout.Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                    ) {
-                                        if (report.isLocked) {
+                        LazyColumn(
+                            state = listState,
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(vertical = 16.dp),
+                        ) {
+                            items(state.reports, key = { it.id }) { report ->
+                                ListItem(
+                                    headlineContent = { Text(report.title) },
+                                    supportingContent = {
+                                        Text(
+                                            text = formatRelativeTime(report.updatedAt),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    },
+                                    trailingContent = {
+                                        androidx.compose.foundation.layout.Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        ) {
+                                            if (report.isLocked) {
+                                                Icon(
+                                                    Icons.Default.Lock,
+                                                    contentDescription = "Locked",
+                                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    modifier = Modifier.size(16.dp),
+                                                )
+                                            }
                                             Icon(
-                                                Icons.Default.Lock,
-                                                contentDescription = "Locked",
+                                                Icons.Default.ChevronRight,
+                                                contentDescription = null,
                                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                modifier = Modifier.size(16.dp),
                                             )
                                         }
-                                        Icon(
-                                            Icons.Default.ChevronRight,
-                                            contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
-                                    }
-                                },
-                                modifier = Modifier.clickable { onNavigateToDetail(report.id) },
-                            )
-                            HorizontalDivider()
-                        }
+                                    },
+                                    modifier = Modifier.clickable { onNavigateToDetail(report.id) },
+                                )
+                                HorizontalDivider()
+                            }
 
-                        if (state.isLoadingMore) {
-                            item {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(16.dp),
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    CircularProgressIndicator()
+                            if (state.isLoadingMore) {
+                                item {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(16.dp),
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        CircularProgressIndicator()
+                                    }
                                 }
                             }
                         }
