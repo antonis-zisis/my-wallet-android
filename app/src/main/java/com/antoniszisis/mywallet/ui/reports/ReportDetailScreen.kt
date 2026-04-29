@@ -251,6 +251,14 @@ fun ReportDetailScreen(
                         }
                     }
 
+                    // Expense breakdown chart
+                    item {
+                        ExpenseBreakdownCard(
+                            transactions = report.transactions,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+
                     // Transactions header
                     item {
                         Row(
