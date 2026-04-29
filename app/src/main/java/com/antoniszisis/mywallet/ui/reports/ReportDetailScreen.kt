@@ -282,6 +282,11 @@ fun ReportDetailScreen(
                             val cat = state.selectedCategory
                             if (cat == null) sorted else sorted.filter { it.category == cat }
                         }
+                    val filteredIncome = filteredTransactions
+                        .filter { it.type.rawValue == "INCOME" }.sumOf { it.amount }
+                    val filteredExpenses = filteredTransactions
+                        .filter { it.type.rawValue == "EXPENSE" }.sumOf { it.amount }
+                    val filteredNet = filteredIncome - filteredExpenses
 
                     item {
                         Row(
@@ -293,6 +298,14 @@ fun ReportDetailScreen(
                                 "Transactions (${filteredTransactions.size})",
                                 style = MaterialTheme.typography.titleMedium,
                             )
+                            if (state.selectedCategory != null && filteredTransactions.isNotEmpty()) {
+                                Text(
+                                    text = (if (filteredNet >= 0) "+" else "-") + formatMoney(Math.abs(filteredNet)),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (filteredNet >= 0) incomeColor() else expenseColor(),
+                                )
+                            }
                         }
                     }
 
