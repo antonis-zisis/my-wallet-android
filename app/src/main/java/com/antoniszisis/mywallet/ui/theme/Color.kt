@@ -33,9 +33,13 @@ val Red100 = Color(0xFFFEE2E2)
 val Red50 = Color(0xFFFEF2F2)
 val Red900 = Color(0xFF7F1D1D)
 
+val Amber100 = Color(0xFFFDE68A)
+val Amber300 = Color(0xFFFCD34D)
 val Amber400 = Color(0xFFFBBF24)
 val Amber500 = Color(0xFFF59E0B)
-val Amber100 = Color(0xFFFDE68A)
+val Amber600 = Color(0xFFD97706)
+val Amber700 = Color(0xFFB45309)
+val Amber900 = Color(0xFF78350F)
 
 val Gray50 = Color(0xFFF9FAFB)
 val Gray100 = Color(0xFFF3F4F6)
@@ -96,4 +100,6 @@ val DarkOutline = Gray600
 // Badge color pairs (background to foreground) — dark mode uses deep containers with lifted text
 @Composable fun monthlyBadgeColors() = if (isSystemInDarkTheme()) Green900 to Green400 else Green100 to Green600
 @Composable fun yearlyBadgeColors() = if (isSystemInDarkTheme()) Indigo800 to Indigo400 else Indigo100 to Indigo600
-@Composable fun cancelledBadgeColors() = if (isSystemInDarkTheme()) Red900 to Red400 else Red100 to Red600
+@Composable fun cancelledBadgeColors() = if (isSystemInDarkTheme()) Red500 to Color.White else Red600 to Color.White
+@Composable fun trialBadgeColors() = if (isSystemInDarkTheme()) Amber900 to Amber300 else Amber100 to Amber700
+@Composable fun trialCountdownColor() = if (isSystemInDarkTheme()) Amber400 else Amber600

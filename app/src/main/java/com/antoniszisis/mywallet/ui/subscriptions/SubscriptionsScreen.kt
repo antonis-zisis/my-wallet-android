@@ -74,9 +74,12 @@ import com.antoniszisis.mywallet.ui.components.EmptyState
 import com.antoniszisis.mywallet.ui.components.ErrorMessage
 import com.antoniszisis.mywallet.ui.components.LoadingScreen
 import com.antoniszisis.mywallet.ui.theme.cancelledBadgeColors
+import com.antoniszisis.mywallet.ui.theme.trialBadgeColors
+import com.antoniszisis.mywallet.ui.theme.trialCountdownColor
 import com.antoniszisis.mywallet.util.formatDate
 import com.antoniszisis.mywallet.util.formatDateShort
 import com.antoniszisis.mywallet.util.formatMoney
+import com.antoniszisis.mywallet.util.getDaysUntil
 import com.antoniszisis.mywallet.util.getNextRenewalDate
 import com.antoniszisis.mywallet.util.toInputDate
 import java.time.LocalDate
@@ -466,11 +469,7 @@ private fun SubscriptionCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = if (sub.isActive) {
-                MaterialTheme.colorScheme.surface
-            } else {
-                MaterialTheme.colorScheme.surfaceVariant
-            }
+            containerColor = MaterialTheme.colorScheme.surface,
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
     ) {
@@ -483,23 +482,55 @@ private fun SubscriptionCard(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 val isCancelled = sub.cancelledAt != null
+                val trialDaysLeft = sub.trialEndsAt?.let { getDaysUntil(it) }
+                val isActiveTrial = trialDaysLeft != null && trialDaysLeft >= 0
+
                 val cycleLabel = if (sub.billingCycle == "MONTHLY") "Monthly" else "Yearly"
                 val cycleBg = MaterialTheme.colorScheme.surfaceVariant
                 val cycleFg = MaterialTheme.colorScheme.onSurfaceVariant
-                val dateText = when {
-                    sub.isActive && isCancelled && sub.endDate != null ->
-                        "active until ${formatDate(sub.endDate)}"
-                    sub.isActive && nextRenewal != null ->
-                        "next renewal at ${formatDate(nextRenewal.toString())}"
-                    !sub.isActive && sub.endDate != null ->
-                        "active until ${formatDate(sub.endDate)}"
-                    else -> null
-                }
                 val altCost = if (sub.billingCycle == "MONTHLY") {
                     "(${formatMoney(sub.amount * 12)}/yr)"
                 } else {
                     "(${formatMoney(sub.monthlyCost)}/mo)"
                 }
+                val amountText = "${formatMoney(sub.amount)} $altCost"
+
+                val (dateText, isAmberSubtitle) = when {
+                    isCancelled && sub.endDate != null -> {
+                        val d = getDaysUntil(sub.endDate)
+                        val s = when {
+                            d < 0 -> "ended ${formatDate(sub.endDate)}"
+                            d == 0 -> "ends today"
+                            d == 1 -> "ends tomorrow"
+                            else -> "ends in $d days · ${formatDate(sub.endDate)}"
+                        }
+                        s to true
+                    }
+                    isActiveTrial -> {
+                        val d = trialDaysLeft!!
+                        val s = when {
+                            d == 0 -> "trial ends today"
+                            d == 1 -> "trial ends tomorrow"
+                            else -> "trial ends in $d days · ${formatDate(sub.trialEndsAt!!)}"
+                        }
+                        s to true
+                    }
+                    sub.isActive && nextRenewal != null -> {
+                        val d = getDaysUntil(nextRenewal.toString())
+                        val rel = when {
+                            d == 0 -> " · today"
+                            d == 1 -> " · tomorrow"
+                            d in 2..29 -> " · in ${d}d"
+                            else -> ""
+                        }
+                        "next renewal at ${formatDate(nextRenewal.toString())}$rel" to false
+                    }
+                    else -> null to false
+                }
+
+                val subtitleColor = if (isAmberSubtitle) trialCountdownColor()
+                                    else MaterialTheme.colorScheme.onSurfaceVariant
+
                 // Title row with badge(s)
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -511,18 +542,28 @@ private fun SubscriptionCard(
                         fontWeight = FontWeight.Medium,
                     )
                     SubscriptionBadge(cycleLabel, cycleBg, cycleFg)
+                    if (isActiveTrial) {
+                        val (trialBg, trialFg) = trialBadgeColors()
+                        SubscriptionBadge("Trial", trialBg, trialFg)
+                    }
                     if (isCancelled) {
                         val (cancelBg, cancelFg) = cancelledBadgeColors()
                         SubscriptionBadge("Cancelled", cancelBg, cancelFg)
                     }
                 }
                 Spacer(Modifier.height(2.dp))
-                // Subtitle row
+                // Amount row
+                Text(
+                    text = amountText,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                // Date text row
                 if (dateText != null) {
                     Text(
-                        text = "$dateText · ${formatMoney(sub.amount)} $altCost",
+                        text = dateText,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = subtitleColor,
                     )
                 }
             }

@@ -103,6 +103,7 @@ type AppSubscription {
   startDate: String!
   endDate: String
   cancelledAt: String
+  trialEndsAt: String
   monthlyCost: Float!
   createdAt: String!
   updatedAt: String!
