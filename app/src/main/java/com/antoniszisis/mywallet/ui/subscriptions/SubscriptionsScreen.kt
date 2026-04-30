@@ -1,6 +1,8 @@
 package com.antoniszisis.mywallet.ui.subscriptions
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -14,6 +16,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Cancel
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ExpandLess
@@ -45,16 +48,23 @@ import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
+import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.antoniszisis.mywallet.graphql.GetSubscriptionsQuery
@@ -66,8 +76,12 @@ import com.antoniszisis.mywallet.ui.theme.cancelledBadgeColors
 import com.antoniszisis.mywallet.ui.theme.monthlyBadgeColors
 import com.antoniszisis.mywallet.ui.theme.yearlyBadgeColors
 import com.antoniszisis.mywallet.util.formatDate
+import com.antoniszisis.mywallet.util.formatDateShort
 import com.antoniszisis.mywallet.util.formatMoney
 import com.antoniszisis.mywallet.util.getNextRenewalDate
+import com.antoniszisis.mywallet.util.toInputDate
+import java.time.LocalDate
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -77,7 +91,14 @@ fun SubscriptionsScreen(
     val state by viewModel.uiState.collectAsState()
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Subscriptions") }) },
+        topBar = {
+            TopAppBar(
+                title = { Text("Subscriptions") },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                ),
+            )
+        },
         floatingActionButton = {
             FloatingActionButton(onClick = viewModel::showAddForm) {
                 Icon(Icons.Default.Add, contentDescription = "Add subscription")
@@ -101,50 +122,170 @@ fun SubscriptionsScreen(
                 ) {
                     // Cost summary cards
                     item {
+                        val now = LocalDate.now()
                         val totalMonthly = state.activeSubscriptions.sumOf { it.monthlyCost }
                         val totalYearly = totalMonthly * 12
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        ) {
-                            Card(
-                                modifier = Modifier.weight(1f),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.surface,
-                                ),
-                                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                        val mostExpensive = state.activeSubscriptions.maxByOrNull { it.monthlyCost }
+                        val firstOfMonth = now.withDayOfMonth(1)
+                        val lastOfMonth = now.withDayOfMonth(now.lengthOfMonth())
+                        val renewingThisMonthTotal = state.activeSubscriptions
+                            .filter { sub ->
+                                try {
+                                    val start = LocalDate.parse(toInputDate(sub.startDate))
+                                    val increment = if (sub.billingCycle == "MONTHLY") 1L else 12L
+                                    // Advance from start until we reach or pass firstOfMonth
+                                    var renewal = start
+                                    while (renewal.isBefore(firstOfMonth)) {
+                                        renewal = renewal.plusMonths(increment)
+                                    }
+                                    !renewal.isAfter(lastOfMonth)
+                                } catch (e: Exception) { false }
+                            }
+                            .sumOf { it.amount }
+                        val nextRenewalEntry = state.activeSubscriptions
+                            .mapNotNull { sub ->
+                                getNextRenewalDate(sub.startDate, sub.billingCycle)?.let { sub to it }
+                            }
+                            .minByOrNull { (_, date) -> date }
+                        val monthName = now.month.name.lowercase().replaceFirstChar { it.titlecase() }
+
+                        val cardColors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                        val cardElevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            // Row 1: Monthly cost | Yearly cost | Renewing this month
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
                             ) {
-                                Column(modifier = Modifier.padding(16.dp)) {
-                                    Text(
-                                        text = "Monthly cost",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                    Text(
-                                        text = formatMoney(totalMonthly),
-                                        style = MaterialTheme.typography.titleLarge,
-                                        fontWeight = FontWeight.SemiBold,
-                                    )
+                                listOf(
+                                    "Monthly cost" to formatMoney(totalMonthly),
+                                    "Yearly cost" to formatMoney(totalYearly),
+                                ).forEach { (label, value) ->
+                                    Card(modifier = Modifier.weight(1f), colors = cardColors, elevation = cardElevation) {
+                                        Column(
+                                            modifier = Modifier.fillMaxWidth().padding(12.dp),
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                        ) {
+                                            Text(
+                                                text = value,
+                                                style = MaterialTheme.typography.titleSmall,
+                                                fontWeight = FontWeight.Bold,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
+                                            )
+                                            Text(
+                                                text = label,
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            )
+                                        }
+                                    }
+                                }
+                                // This month — with info tooltip
+                                Card(modifier = Modifier.weight(1f), colors = cardColors, elevation = cardElevation) {
+                                    Column(
+                                        modifier = Modifier.fillMaxWidth().padding(12.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                    ) {
+                                        Text(
+                                            text = formatMoney(renewingThisMonthTotal),
+                                            style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = FontWeight.Bold,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                        )
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.Center,
+                                        ) {
+                                            Text(
+                                                text = "This month",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            )
+                                            val tooltipState = rememberTooltipState()
+                                            val scope = rememberCoroutineScope()
+                                            TooltipBox(
+                                                positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
+                                                tooltip = { PlainTooltip { Text("Total charged in $monthName") } },
+                                                state = tooltipState,
+                                            ) {
+                                                Icon(
+                                                    Icons.Default.Info,
+                                                    contentDescription = "Info",
+                                                    modifier = Modifier
+                                                        .padding(start = 2.dp)
+                                                        .size(10.dp)
+                                                        .clickable { scope.launch { tooltipState.show() } },
+                                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                )
+                                            }
+                                        }
+                                    }
                                 }
                             }
-                            Card(
-                                modifier = Modifier.weight(1f),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.surface,
-                                ),
-                                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+
+                            // Row 2: Next renewal | Most expensive
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
                             ) {
-                                Column(modifier = Modifier.padding(16.dp)) {
-                                    Text(
-                                        text = "Yearly cost",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                    Text(
-                                        text = formatMoney(totalYearly),
-                                        style = MaterialTheme.typography.titleLarge,
-                                        fontWeight = FontWeight.SemiBold,
-                                    )
+                                // Next renewal
+                                Card(modifier = Modifier.weight(1f), colors = cardColors, elevation = cardElevation) {
+                                    Column(
+                                        modifier = Modifier.fillMaxWidth().padding(12.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                    ) {
+                                        if (nextRenewalEntry != null) {
+                                            val (sub, date) = nextRenewalEntry
+                                            Text(
+                                                text = sub.name,
+                                                style = MaterialTheme.typography.titleSmall,
+                                                fontWeight = FontWeight.Bold,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
+                                            )
+                                            Text(
+                                                text = "${formatDateShort(date.toString())} · ${formatMoney(sub.amount)}",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
+                                            )
+                                        } else {
+                                            Text(
+                                                text = "—",
+                                                style = MaterialTheme.typography.titleSmall,
+                                                fontWeight = FontWeight.Bold,
+                                            )
+                                        }
+                                        Text(
+                                            text = "Next renewal",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
+                                }
+                                // Most expensive
+                                Card(modifier = Modifier.weight(1f), colors = cardColors, elevation = cardElevation) {
+                                    Column(
+                                        modifier = Modifier.fillMaxWidth().padding(12.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                    ) {
+                                        Text(
+                                            text = mostExpensive?.name ?: "—",
+                                            style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = FontWeight.Bold,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                        )
+                                        Text(
+                                            text = "Most expensive",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
                                 }
                             }
                         }
