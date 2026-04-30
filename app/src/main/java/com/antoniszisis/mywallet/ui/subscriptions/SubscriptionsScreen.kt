@@ -133,7 +133,6 @@ fun SubscriptionsScreen(
                                 try {
                                     val start = LocalDate.parse(toInputDate(sub.startDate))
                                     val increment = if (sub.billingCycle == "MONTHLY") 1L else 12L
-                                    // Advance from start until we reach or pass firstOfMonth
                                     var renewal = start
                                     while (renewal.isBefore(firstOfMonth)) {
                                         renewal = renewal.plusMonths(increment)
@@ -151,9 +150,12 @@ fun SubscriptionsScreen(
 
                         val cardColors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
                         val cardElevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                        val scope = rememberCoroutineScope()
+                        val thisMonthTooltipState = rememberTooltipState()
+                        val mostExpensiveTooltipState = rememberTooltipState()
 
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            // Row 1: Monthly cost | Yearly cost | Renewing this month
+                            // Row 1: Monthly cost | Yearly cost | This month
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -204,12 +206,10 @@ fun SubscriptionsScreen(
                                                 style = MaterialTheme.typography.labelSmall,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             )
-                                            val tooltipState = rememberTooltipState()
-                                            val scope = rememberCoroutineScope()
                                             TooltipBox(
                                                 positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
                                                 tooltip = { PlainTooltip { Text("Total charged in $monthName") } },
-                                                state = tooltipState,
+                                                state = thisMonthTooltipState,
                                             ) {
                                                 Icon(
                                                     Icons.Default.Info,
@@ -217,7 +217,7 @@ fun SubscriptionsScreen(
                                                     modifier = Modifier
                                                         .padding(start = 2.dp)
                                                         .size(10.dp)
-                                                        .clickable { scope.launch { tooltipState.show() } },
+                                                        .clickable { scope.launch { thisMonthTooltipState.show() } },
                                                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                                 )
                                             }
@@ -239,15 +239,17 @@ fun SubscriptionsScreen(
                                     ) {
                                         if (nextRenewalEntry != null) {
                                             val (sub, date) = nextRenewalEntry
+                                            // Line 1: name · price
                                             Text(
-                                                text = sub.name,
+                                                text = "${sub.name} · ${formatMoney(sub.amount)}",
                                                 style = MaterialTheme.typography.titleSmall,
                                                 fontWeight = FontWeight.Bold,
                                                 maxLines = 1,
                                                 overflow = TextOverflow.Ellipsis,
                                             )
+                                            // Line 2: Next renewal - May 2, 2026
                                             Text(
-                                                text = "${formatDateShort(date.toString())} · ${formatMoney(sub.amount)}",
+                                                text = "Next renewal - ${formatDate(date.toString())}",
                                                 style = MaterialTheme.typography.labelSmall,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                                 maxLines = 1,
@@ -259,12 +261,12 @@ fun SubscriptionsScreen(
                                                 style = MaterialTheme.typography.titleSmall,
                                                 fontWeight = FontWeight.Bold,
                                             )
+                                            Text(
+                                                text = "Next renewal",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            )
                                         }
-                                        Text(
-                                            text = "Next renewal",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
                                     }
                                 }
                                 // Most expensive
@@ -273,6 +275,7 @@ fun SubscriptionsScreen(
                                         modifier = Modifier.fillMaxWidth().padding(12.dp),
                                         horizontalAlignment = Alignment.CenterHorizontally,
                                     ) {
+                                        // Line 1: name
                                         Text(
                                             text = mostExpensive?.name ?: "—",
                                             style = MaterialTheme.typography.titleSmall,
@@ -280,11 +283,43 @@ fun SubscriptionsScreen(
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis,
                                         )
-                                        Text(
-                                            text = "Most expensive",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
+                                        // Line 2: "Most expensive · €X/mo" + info icon
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.Center,
+                                        ) {
+                                            Text(
+                                                text = if (mostExpensive != null)
+                                                    "Most expensive · ${formatMoney(mostExpensive.monthlyCost)}/mo"
+                                                else
+                                                    "Most expensive",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
+                                            )
+                                            if (mostExpensive != null) {
+                                                TooltipBox(
+                                                    positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
+                                                    tooltip = {
+                                                        PlainTooltip {
+                                                            Text("Yearly cost: ${formatMoney(mostExpensive.monthlyCost * 12)}")
+                                                        }
+                                                    },
+                                                    state = mostExpensiveTooltipState,
+                                                ) {
+                                                    Icon(
+                                                        Icons.Default.Info,
+                                                        contentDescription = "Info",
+                                                        modifier = Modifier
+                                                            .padding(start = 2.dp)
+                                                            .size(10.dp)
+                                                            .clickable { scope.launch { mostExpensiveTooltipState.show() } },
+                                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    )
+                                                }
+                                            }
+                                        }
                                     }
                                 }
                             }
