@@ -16,6 +16,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Cancel
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -28,6 +29,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -716,9 +720,58 @@ private fun SubscriptionFormDialog(
     onSave: () -> Unit,
     onDismiss: () -> Unit,
 ) {
+    val billingCycleOptions = listOf("MONTHLY", "YEARLY", "WEEKLY", "QUARTERLY", "BIANNUAL")
+    val billingCycleLabel: (String) -> String = {
+        when (it) {
+            "MONTHLY" -> "Monthly"
+            "YEARLY" -> "Yearly"
+            "WEEKLY" -> "Weekly"
+            "QUARTERLY" -> "Quarterly"
+            "BIANNUAL" -> "Bi-Annual"
+            else -> it.lowercase().replaceFirstChar { c -> c.uppercase() }
+        }
+    }
+
+    var billingExpanded by remember { mutableStateOf(false) }
+    var showStartDatePicker by remember { mutableStateOf(false) }
+
+    if (showStartDatePicker) {
+        val initialMillis = remember {
+            try {
+                LocalDate.parse(state.startDate)
+                    .atStartOfDay(java.time.ZoneOffset.UTC)
+                    .toInstant()
+                    .toEpochMilli()
+            } catch (e: Exception) {
+                System.currentTimeMillis()
+            }
+        }
+        val datePickerState = rememberDatePickerState(initialSelectedDateMillis = initialMillis)
+        DatePickerDialog(
+            onDismissRequest = { showStartDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    datePickerState.selectedDateMillis?.let { millis ->
+                        val picked = java.time.Instant.ofEpochMilli(millis)
+                            .atZone(java.time.ZoneOffset.UTC)
+                            .toLocalDate()
+                            .toString()
+                        onStartDateChange(picked)
+                    }
+                    showStartDatePicker = false
+                }) { Text("OK") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showStartDatePicker = false }) { Text("Cancel") }
+            },
+        ) {
+            DatePicker(state = datePickerState)
+        }
+    }
+
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (state.id == null) "Add Subscription" else "Edit Subscription") },
+        title = { Text(if (state.id == null) "New Subscription" else "Edit Subscription") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(
@@ -740,25 +793,53 @@ private fun SubscriptionFormDialog(
                     modifier = Modifier.fillMaxWidth(),
                 )
 
-                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                    listOf("MONTHLY", "YEARLY").forEachIndexed { index, cycle ->
-                        SegmentedButton(
-                            selected = state.billingCycle == cycle,
-                            onClick = { onBillingCycleChange(cycle) },
-                            shape = SegmentedButtonDefaults.itemShape(index = index, count = 2),
-                        ) {
-                            Text(cycle.lowercase().replaceFirstChar { it.uppercase() })
+                ExposedDropdownMenuBox(
+                    expanded = billingExpanded,
+                    onExpandedChange = { billingExpanded = it },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    OutlinedTextField(
+                        value = billingCycleLabel(state.billingCycle),
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Billing Cycle") },
+                        trailingIcon = {
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = billingExpanded)
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .menuAnchor(),
+                    )
+                    ExposedDropdownMenu(
+                        expanded = billingExpanded,
+                        onDismissRequest = { billingExpanded = false },
+                    ) {
+                        billingCycleOptions.forEach { cycle ->
+                            DropdownMenuItem(
+                                text = { Text(billingCycleLabel(cycle)) },
+                                onClick = {
+                                    onBillingCycleChange(cycle)
+                                    billingExpanded = false
+                                },
+                            )
                         }
                     }
                 }
 
-                OutlinedTextField(
-                    value = state.startDate,
-                    onValueChange = onStartDateChange,
-                    label = { Text("Start Date (YYYY-MM-DD)") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    OutlinedTextField(
+                        value = state.startDate,
+                        onValueChange = {},
+                        label = { Text("Start Date") },
+                        readOnly = true,
+                        singleLine = true,
+                        trailingIcon = {
+                            Icon(Icons.Default.DateRange, contentDescription = "Select date")
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Box(modifier = Modifier.matchParentSize().clickable { showStartDatePicker = true })
+                }
 
                 OutlinedTextField(
                     value = state.endDate,
@@ -778,7 +859,11 @@ private fun SubscriptionFormDialog(
             }
         },
         confirmButton = {
-            Button(onClick = onSave, enabled = !isSaving) {
+            Button(
+                onClick = onSave,
+                enabled = !isSaving,
+                shape = RoundedCornerShape(4.dp),
+            ) {
                 if (isSaving) {
                     CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
                 } else {
