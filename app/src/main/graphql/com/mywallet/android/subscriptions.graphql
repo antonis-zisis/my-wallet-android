@@ -10,6 +10,9 @@ query GetSubscriptions($page: Int, $active: Boolean) {
       endDate
       cancelledAt
       trialEndsAt
+      notes
+      paymentMethod
+      url
       monthlyCost
       createdAt
       updatedAt

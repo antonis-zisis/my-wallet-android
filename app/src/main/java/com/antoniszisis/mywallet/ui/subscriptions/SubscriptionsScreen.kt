@@ -1,5 +1,6 @@
 package com.antoniszisis.mywallet.ui.subscriptions
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -29,6 +30,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.rememberDatePickerState
@@ -68,6 +70,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -413,7 +416,11 @@ fun SubscriptionsScreen(
             onAmountChange = viewModel::onFormAmountChange,
             onBillingCycleChange = viewModel::onFormBillingCycleChange,
             onStartDateChange = viewModel::onFormStartDateChange,
-            onEndDateChange = viewModel::onFormEndDateChange,
+            onIsTrialChange = viewModel::onFormIsTrialChange,
+            onTrialEndsAtChange = viewModel::onFormTrialEndsAtChange,
+            onUrlChange = viewModel::onFormUrlChange,
+            onPaymentMethodChange = viewModel::onFormPaymentMethodChange,
+            onNotesChange = viewModel::onFormNotesChange,
             onSave = viewModel::saveSubscription,
             onDismiss = viewModel::dismissForm,
         )
@@ -469,6 +476,7 @@ private fun SubscriptionCard(
 ) {
     var showMenu by remember { mutableStateOf(false) }
     val nextRenewal = getNextRenewalDate(sub.startDate, sub.billingCycle)
+
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -568,6 +576,21 @@ private fun SubscriptionCard(
                         text = dateText,
                         style = MaterialTheme.typography.bodySmall,
                         color = subtitleColor,
+                    )
+                }
+                // Tertiary line: payment method + notes
+                val tertiaryParts = listOfNotNull(
+                    sub.paymentMethod?.takeIf { it.isNotBlank() }?.let { "via $it" },
+                    sub.notes?.takeIf { it.isNotBlank() },
+                )
+                if (tertiaryParts.isNotEmpty()) {
+                    Text(
+                        text = tertiaryParts.joinToString(" · "),
+                        style = MaterialTheme.typography.bodySmall,
+                        fontStyle = FontStyle.Italic,
+                        color = MaterialTheme.colorScheme.outline,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
             }
@@ -716,7 +739,11 @@ private fun SubscriptionFormDialog(
     onAmountChange: (String) -> Unit,
     onBillingCycleChange: (String) -> Unit,
     onStartDateChange: (String) -> Unit,
-    onEndDateChange: (String) -> Unit,
+    onIsTrialChange: (Boolean) -> Unit,
+    onTrialEndsAtChange: (String) -> Unit,
+    onUrlChange: (String) -> Unit,
+    onPaymentMethodChange: (String) -> Unit,
+    onNotesChange: (String) -> Unit,
     onSave: () -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -734,6 +761,10 @@ private fun SubscriptionFormDialog(
 
     var billingExpanded by remember { mutableStateOf(false) }
     var showStartDatePicker by remember { mutableStateOf(false) }
+    var showTrialDatePicker by remember { mutableStateOf(false) }
+    var showAdditionalDetails by remember(state.id) {
+        mutableStateOf(state.url.isNotBlank() || state.paymentMethod.isNotBlank() || state.notes.isNotBlank())
+    }
 
     if (showStartDatePicker) {
         val initialMillis = remember {
@@ -763,6 +794,40 @@ private fun SubscriptionFormDialog(
             },
             dismissButton = {
                 TextButton(onClick = { showStartDatePicker = false }) { Text("Cancel") }
+            },
+        ) {
+            DatePicker(state = datePickerState)
+        }
+    }
+
+    if (showTrialDatePicker) {
+        val initialMillis = remember {
+            try {
+                LocalDate.parse(state.trialEndsAt)
+                    .atStartOfDay(java.time.ZoneOffset.UTC)
+                    .toInstant()
+                    .toEpochMilli()
+            } catch (e: Exception) {
+                System.currentTimeMillis()
+            }
+        }
+        val datePickerState = rememberDatePickerState(initialSelectedDateMillis = initialMillis)
+        DatePickerDialog(
+            onDismissRequest = { showTrialDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    datePickerState.selectedDateMillis?.let { millis ->
+                        val picked = java.time.Instant.ofEpochMilli(millis)
+                            .atZone(java.time.ZoneOffset.UTC)
+                            .toLocalDate()
+                            .toString()
+                        onTrialEndsAtChange(picked)
+                    }
+                    showTrialDatePicker = false
+                }) { Text("OK") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showTrialDatePicker = false }) { Text("Cancel") }
             },
         ) {
             DatePicker(state = datePickerState)
@@ -841,13 +906,88 @@ private fun SubscriptionFormDialog(
                     Box(modifier = Modifier.matchParentSize().clickable { showStartDatePicker = true })
                 }
 
-                OutlinedTextField(
-                    value = state.endDate,
-                    onValueChange = onEndDateChange,
-                    label = { Text("End Date (optional)") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
+                // Trial
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onIsTrialChange(!state.isTrial) },
+                ) {
+                    Checkbox(
+                        checked = state.isTrial,
+                        onCheckedChange = onIsTrialChange,
+                    )
+                    Text(
+                        text = "Currently on a free trial",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+
+                AnimatedVisibility(visible = state.isTrial) {
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        OutlinedTextField(
+                            value = state.trialEndsAt,
+                            onValueChange = {},
+                            label = { Text("Trial ends") },
+                            readOnly = true,
+                            singleLine = true,
+                            trailingIcon = {
+                                Icon(Icons.Default.DateRange, contentDescription = "Select date")
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        Box(modifier = Modifier.matchParentSize().clickable { showTrialDatePicker = true })
+                    }
+                }
+
+                // Additional details
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { showAdditionalDetails = !showAdditionalDetails },
+                ) {
+                    Text(
+                        text = "Additional details",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                    Icon(
+                        imageVector = if (showAdditionalDetails) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                }
+
+                AnimatedVisibility(visible = showAdditionalDetails) {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        OutlinedTextField(
+                            value = state.url,
+                            onValueChange = onUrlChange,
+                            label = { Text("Website URL") },
+                            placeholder = { Text("https://...") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        OutlinedTextField(
+                            value = state.paymentMethod,
+                            onValueChange = onPaymentMethodChange,
+                            label = { Text("Payment Method") },
+                            placeholder = { Text("e.g. Revolut, Visa *1234") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        OutlinedTextField(
+                            value = state.notes,
+                            onValueChange = onNotesChange,
+                            label = { Text("Notes") },
+                            placeholder = { Text("e.g. shared with sister") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+                }
 
                 if (state.error != null) {
                     Text(

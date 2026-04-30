@@ -21,6 +21,11 @@ data class SubscriptionFormState(
     val billingCycle: String = "MONTHLY",
     val startDate: String = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")),
     val endDate: String = "",
+    val isTrial: Boolean = false,
+    val trialEndsAt: String = "",
+    val url: String = "",
+    val paymentMethod: String = "",
+    val notes: String = "",
     val error: String? = null,
 )
 
@@ -128,6 +133,11 @@ class SubscriptionsViewModel @Inject constructor(
                 billingCycle = sub.billingCycle,
                 startDate = toInputDate(sub.startDate),
                 endDate = sub.endDate?.let { toInputDate(it) } ?: "",
+                isTrial = sub.trialEndsAt != null,
+                trialEndsAt = sub.trialEndsAt?.let { toInputDate(it) } ?: "",
+                url = sub.url ?: "",
+                paymentMethod = sub.paymentMethod ?: "",
+                notes = sub.notes ?: "",
             ),
         )
     }
@@ -141,6 +151,11 @@ class SubscriptionsViewModel @Inject constructor(
     fun onFormBillingCycleChange(v: String) = updateForm { copy(billingCycle = v, error = null) }
     fun onFormStartDateChange(v: String) = updateForm { copy(startDate = v, error = null) }
     fun onFormEndDateChange(v: String) = updateForm { copy(endDate = v, error = null) }
+    fun onFormIsTrialChange(v: Boolean) = updateForm { copy(isTrial = v, trialEndsAt = if (!v) "" else trialEndsAt, error = null) }
+    fun onFormTrialEndsAtChange(v: String) = updateForm { copy(trialEndsAt = v, error = null) }
+    fun onFormUrlChange(v: String) = updateForm { copy(url = v, error = null) }
+    fun onFormPaymentMethodChange(v: String) = updateForm { copy(paymentMethod = v, error = null) }
+    fun onFormNotesChange(v: String) = updateForm { copy(notes = v, error = null) }
 
     private fun updateForm(update: SubscriptionFormState.() -> SubscriptionFormState) {
         _uiState.value = _uiState.value.copy(form = _uiState.value.form.update())
@@ -157,6 +172,10 @@ class SubscriptionsViewModel @Inject constructor(
             updateForm { copy(error = "Enter a valid amount") }
             return
         }
+        if (form.isTrial && form.trialEndsAt.isBlank()) {
+            updateForm { copy(error = "Trial end date is required") }
+            return
+        }
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isSaving = true)
             val result = if (form.id == null) {
@@ -166,6 +185,10 @@ class SubscriptionsViewModel @Inject constructor(
                     billingCycle = form.billingCycle,
                     startDate = form.startDate,
                     endDate = form.endDate.takeIf { it.isNotBlank() },
+                    trialEndsAt = form.trialEndsAt.takeIf { form.isTrial && it.isNotBlank() },
+                    notes = form.notes.takeIf { it.isNotBlank() },
+                    paymentMethod = form.paymentMethod.takeIf { it.isNotBlank() },
+                    url = form.url.takeIf { it.isNotBlank() },
                 )
             } else {
                 subscriptionRepository.updateSubscription(
@@ -175,6 +198,10 @@ class SubscriptionsViewModel @Inject constructor(
                     billingCycle = form.billingCycle,
                     startDate = form.startDate,
                     endDate = form.endDate.takeIf { it.isNotBlank() },
+                    trialEndsAt = form.trialEndsAt.takeIf { form.isTrial && it.isNotBlank() },
+                    notes = form.notes.takeIf { it.isNotBlank() },
+                    paymentMethod = form.paymentMethod.takeIf { it.isNotBlank() },
+                    url = form.url.takeIf { it.isNotBlank() },
                 )
             }
             result.fold(
