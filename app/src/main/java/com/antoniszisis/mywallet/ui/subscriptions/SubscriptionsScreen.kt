@@ -73,8 +73,6 @@ import com.antoniszisis.mywallet.ui.components.EmptyState
 import com.antoniszisis.mywallet.ui.components.ErrorMessage
 import com.antoniszisis.mywallet.ui.components.LoadingScreen
 import com.antoniszisis.mywallet.ui.theme.cancelledBadgeColors
-import com.antoniszisis.mywallet.ui.theme.monthlyBadgeColors
-import com.antoniszisis.mywallet.ui.theme.yearlyBadgeColors
 import com.antoniszisis.mywallet.util.formatDate
 import com.antoniszisis.mywallet.util.formatDateShort
 import com.antoniszisis.mywallet.util.formatMoney
@@ -118,7 +116,7 @@ fun SubscriptionsScreen(
                         .fillMaxSize()
                         .padding(padding),
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     // Cost summary cards
                     item {
@@ -331,6 +329,7 @@ fun SubscriptionsScreen(
                         Text(
                             "Active (${state.activeSubscriptions.size})",
                             style = MaterialTheme.typography.titleMedium,
+                            modifier = Modifier.padding(top = 8.dp),
                         )
                     }
 
@@ -478,11 +477,8 @@ private fun SubscriptionCard(
             Column(modifier = Modifier.weight(1f)) {
                 val isCancelled = sub.cancelledAt != null
                 val cycleLabel = if (sub.billingCycle == "MONTHLY") "Monthly" else "Yearly"
-                val (cycleBg, cycleFg) = if (sub.billingCycle == "MONTHLY") {
-                    monthlyBadgeColors()
-                } else {
-                    yearlyBadgeColors()
-                }
+                val cycleBg = MaterialTheme.colorScheme.surfaceVariant
+                val cycleFg = MaterialTheme.colorScheme.onSurfaceVariant
                 val dateText = when {
                     sub.isActive && isCancelled && sub.endDate != null ->
                         "active until ${formatDate(sub.endDate)}"
@@ -571,7 +567,7 @@ private fun SubscriptionCard(
 private fun SubscriptionBadge(label: String, bg: androidx.compose.ui.graphics.Color, fg: androidx.compose.ui.graphics.Color) {
     androidx.compose.foundation.layout.Box(
         modifier = Modifier
-            .clip(RoundedCornerShape(50))
+            .clip(RoundedCornerShape(4.dp))
             .background(bg)
             .padding(horizontal = 8.dp, vertical = 2.dp),
     ) {
