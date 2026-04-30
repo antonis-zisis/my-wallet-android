@@ -9,6 +9,10 @@ query GetSubscriptions($page: Int, $active: Boolean) {
       startDate
       endDate
       cancelledAt
+      trialEndsAt
+      notes
+      paymentMethod
+      url
       monthlyCost
       createdAt
       updatedAt
@@ -27,6 +31,7 @@ mutation CreateSubscription($input: CreateSubscriptionInput!) {
     startDate
     endDate
     cancelledAt
+    trialEndsAt
     monthlyCost
     createdAt
     updatedAt
@@ -43,6 +48,7 @@ mutation UpdateSubscription($input: UpdateSubscriptionInput!) {
     startDate
     endDate
     cancelledAt
+    trialEndsAt
     monthlyCost
     createdAt
     updatedAt
@@ -66,6 +72,7 @@ mutation ResumeSubscription($input: ResumeSubscriptionInput!) {
     startDate
     endDate
     cancelledAt
+    trialEndsAt
     monthlyCost
     createdAt
     updatedAt

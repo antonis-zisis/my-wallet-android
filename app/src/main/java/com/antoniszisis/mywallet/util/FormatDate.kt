@@ -5,6 +5,7 @@ import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 import java.util.Locale
 
 private val reportTitleInputFormatter = DateTimeFormatter.ofPattern("MMMM yyyy", Locale.ENGLISH)
@@ -61,6 +62,13 @@ fun toInputDate(raw: String): String = try {
 }
 
 fun today(): String = LocalDate.now().toIsoString()
+
+/** Days from today to [dateStr] — positive = future, negative = past. */
+fun getDaysUntil(dateStr: String): Int = try {
+    ChronoUnit.DAYS.between(LocalDate.now(), parseToLocalDate(dateStr)).toInt()
+} catch (_: Exception) {
+    Int.MIN_VALUE
+}
 
 fun getNextRenewalDate(startDate: String, billingCycle: String): LocalDate? {
     return try {

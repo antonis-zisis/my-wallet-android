@@ -103,6 +103,10 @@ type AppSubscription {
   startDate: String!
   endDate: String
   cancelledAt: String
+  trialEndsAt: String
+  notes: String
+  paymentMethod: String
+  url: String
   monthlyCost: Float!
   createdAt: String!
   updatedAt: String!
@@ -126,6 +130,10 @@ input CreateSubscriptionInput {
   billingCycle: String!
   startDate: String!
   endDate: String
+  trialEndsAt: String
+  notes: String
+  paymentMethod: String
+  url: String
 }
 
 input UpdateSubscriptionInput {
@@ -135,6 +143,10 @@ input UpdateSubscriptionInput {
   billingCycle: String!
   startDate: String!
   endDate: String
+  trialEndsAt: String
+  notes: String
+  paymentMethod: String
+  url: String
 }
 
 type NetWorthSnapshot {

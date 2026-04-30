@@ -42,6 +42,10 @@ class SubscriptionRepository @Inject constructor(
         billingCycle: String,
         startDate: String,
         endDate: String?,
+        trialEndsAt: String? = null,
+        notes: String? = null,
+        paymentMethod: String? = null,
+        url: String? = null,
     ): Result<CreateSubscriptionMutation.CreateSubscription> {
         return try {
             val response = apollo.mutation(
@@ -52,6 +56,10 @@ class SubscriptionRepository @Inject constructor(
                         billingCycle = billingCycle,
                         startDate = startDate,
                         endDate = Optional.presentIfNotNull(endDate),
+                        trialEndsAt = Optional.presentIfNotNull(trialEndsAt),
+                        notes = Optional.presentIfNotNull(notes),
+                        paymentMethod = Optional.presentIfNotNull(paymentMethod),
+                        url = Optional.presentIfNotNull(url),
                     )
                 )
             ).execute()
@@ -69,6 +77,10 @@ class SubscriptionRepository @Inject constructor(
         billingCycle: String,
         startDate: String,
         endDate: String?,
+        trialEndsAt: String? = null,
+        notes: String? = null,
+        paymentMethod: String? = null,
+        url: String? = null,
     ): Result<UpdateSubscriptionMutation.UpdateSubscription> {
         return try {
             val response = apollo.mutation(
@@ -80,6 +92,10 @@ class SubscriptionRepository @Inject constructor(
                         billingCycle = billingCycle,
                         startDate = startDate,
                         endDate = Optional.presentIfNotNull(endDate),
+                        trialEndsAt = Optional.presentIfNotNull(trialEndsAt),
+                        notes = Optional.presentIfNotNull(notes),
+                        paymentMethod = Optional.presentIfNotNull(paymentMethod),
+                        url = Optional.presentIfNotNull(url),
                     )
                 )
             ).execute()

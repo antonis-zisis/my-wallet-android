@@ -1,6 +1,8 @@
 package com.antoniszisis.mywallet.ui.reports
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -17,15 +19,19 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Button
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Surface
@@ -557,18 +563,59 @@ fun TransactionFormDialog(
         state.category
     }
 
+    var showDatePicker by remember { mutableStateOf(false) }
+
+    if (showDatePicker) {
+        val initialMillis = remember {
+            try {
+                java.time.LocalDate.parse(state.date)
+                    .atStartOfDay(java.time.ZoneOffset.UTC)
+                    .toInstant()
+                    .toEpochMilli()
+            } catch (e: Exception) {
+                System.currentTimeMillis()
+            }
+        }
+        val datePickerState = rememberDatePickerState(initialSelectedDateMillis = initialMillis)
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    datePickerState.selectedDateMillis?.let { millis ->
+                        val picked = java.time.Instant.ofEpochMilli(millis)
+                            .atZone(java.time.ZoneOffset.UTC)
+                            .toLocalDate()
+                            .toString()
+                        onDateChange(picked)
+                    }
+                    showDatePicker = false
+                }) { Text("OK") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDatePicker = false }) { Text("Cancel") }
+            },
+        ) {
+            DatePicker(state = datePickerState)
+        }
+    }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(if (state.id == null) "Add Transaction" else "Edit Transaction") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                // Type toggle
+                // Type toggle with 4dp corner radius
                 SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
                     listOf("EXPENSE", "INCOME").forEachIndexed { index, type ->
+                        val shape = if (index == 0) {
+                            RoundedCornerShape(topStart = 4.dp, bottomStart = 4.dp, topEnd = 0.dp, bottomEnd = 0.dp)
+                        } else {
+                            RoundedCornerShape(topStart = 0.dp, bottomStart = 0.dp, topEnd = 4.dp, bottomEnd = 4.dp)
+                        }
                         SegmentedButton(
                             selected = state.type == type,
                             onClick = { onTypeChange(type) },
-                            shape = SegmentedButtonDefaults.itemShape(index = index, count = 2),
+                            shape = shape,
                         ) {
                             Text(type.lowercase().replaceFirstChar { it.uppercase() })
                         }
@@ -601,13 +648,21 @@ fun TransactionFormDialog(
                     onSelect = onCategoryChange,
                 )
 
-                OutlinedTextField(
-                    value = state.date,
-                    onValueChange = onDateChange,
-                    label = { Text("Date (YYYY-MM-DD)") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
+                // Date field — tap to open date picker
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    OutlinedTextField(
+                        value = state.date,
+                        onValueChange = {},
+                        label = { Text("Date") },
+                        readOnly = true,
+                        singleLine = true,
+                        trailingIcon = {
+                            Icon(Icons.Default.DateRange, contentDescription = "Select date")
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Box(modifier = Modifier.matchParentSize().clickable { showDatePicker = true })
+                }
 
                 if (state.error != null) {
                     Text(
@@ -619,7 +674,11 @@ fun TransactionFormDialog(
             }
         },
         confirmButton = {
-            Button(onClick = onSave, enabled = !isSaving) {
+            Button(
+                onClick = onSave,
+                enabled = !isSaving,
+                shape = RoundedCornerShape(4.dp),
+            ) {
                 if (isSaving) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(16.dp),
@@ -631,7 +690,11 @@ fun TransactionFormDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss, enabled = !isSaving) {
+            TextButton(
+                onClick = onDismiss,
+                enabled = !isSaving,
+                shape = RoundedCornerShape(4.dp),
+            ) {
                 Text("Cancel")
             }
         }
