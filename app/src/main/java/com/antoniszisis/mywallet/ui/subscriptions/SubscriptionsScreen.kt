@@ -42,6 +42,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
@@ -111,10 +112,15 @@ fun SubscriptionsScreen(
                 modifier = Modifier.padding(padding),
             )
             else -> {
-                LazyColumn(
+                PullToRefreshBox(
+                    isRefreshing = state.isRefreshing,
+                    onRefresh = viewModel::refresh,
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(padding),
+                ) {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
@@ -386,6 +392,7 @@ fun SubscriptionsScreen(
 
                     item { Spacer(Modifier.height(72.dp)) }
                 }
+                } // PullToRefreshBox
             }
         }
     }
@@ -521,6 +528,7 @@ private fun SubscriptionCard(
             }
 
             // Action menu
+            Box {
             IconButton(onClick = { showMenu = true }) {
                 Icon(Icons.Default.MoreVert, contentDescription = "Options")
             }
@@ -559,6 +567,7 @@ private fun SubscriptionCard(
                     onClick = { showMenu = false; onDelete() },
                 )
             }
+            } // Box
         }
     }
 }

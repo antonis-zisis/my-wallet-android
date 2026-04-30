@@ -35,6 +35,7 @@ data class ResumeFormState(
 
 data class SubscriptionsUiState(
     val isLoading: Boolean = true,
+    val isRefreshing: Boolean = false,
     val error: String? = null,
     val activeSubscriptions: List<GetSubscriptionsQuery.Item> = emptyList(),
     val activeTotalCount: Int = 0,
@@ -78,6 +79,24 @@ class SubscriptionsViewModel @Inject constructor(
 
             _uiState.value = _uiState.value.copy(
                 isLoading = false,
+                activeSubscriptions = activeResult.getOrNull()?.items ?: emptyList(),
+                activeTotalCount = activeResult.getOrNull()?.totalCount ?: 0,
+                inactiveSubscriptions = inactiveResult.getOrNull()?.items ?: emptyList(),
+                inactiveTotalCount = inactiveResult.getOrNull()?.totalCount ?: 0,
+                error = activeResult.exceptionOrNull()?.message,
+            )
+        }
+    }
+
+    fun refresh() {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isRefreshing = true, error = null)
+            val activeDeferred = async { subscriptionRepository.getSubscriptions(page = 1, active = true) }
+            val inactiveDeferred = async { subscriptionRepository.getSubscriptions(page = 1, active = false) }
+            val activeResult = activeDeferred.await()
+            val inactiveResult = inactiveDeferred.await()
+            _uiState.value = _uiState.value.copy(
+                isRefreshing = false,
                 activeSubscriptions = activeResult.getOrNull()?.items ?: emptyList(),
                 activeTotalCount = activeResult.getOrNull()?.totalCount ?: 0,
                 inactiveSubscriptions = inactiveResult.getOrNull()?.items ?: emptyList(),
