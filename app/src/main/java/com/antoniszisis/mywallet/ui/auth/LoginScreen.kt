@@ -18,6 +18,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -82,7 +83,7 @@ fun LoginScreen(
                     text = "My Wallet",
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary,
+                    color = MaterialTheme.colorScheme.onBackground,
                 )
                 Text(
                     text = "Sign in to your account",
@@ -153,6 +154,7 @@ fun LoginScreen(
                     onClick = { viewModel.signIn(onLoginSuccess) },
                     modifier = Modifier.fillMaxWidth(),
                     enabled = !state.isLoading,
+                    shape = RoundedCornerShape(4.dp),
                 ) {
                     if (state.isLoading) {
                         CircularProgressIndicator(
