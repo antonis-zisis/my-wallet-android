@@ -159,7 +159,7 @@ fun ProfileScreen(
                                 Icon(
                                     Icons.Default.Person,
                                     contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
                                     modifier = Modifier.size(16.dp),
                                 )
                             }
@@ -239,7 +239,7 @@ fun ProfileScreen(
                         ) {
                             Button(
                                 onClick = viewModel::saveFullName,
-                                enabled = !state.isSavingName,
+                                enabled = !state.isSavingName && state.editedFullName.trim() != state.fullName,
                                 shape = RoundedCornerShape(4.dp),
                             ) {
                                 if (state.isSavingName) {
@@ -252,38 +252,6 @@ fun ProfileScreen(
                                     Text("Save")
                                 }
                             }
-                        }
-                    }
-                }
-
-                // Appearance section
-                SectionCard(title = "Appearance") {
-                    Text(
-                        "Theme",
-                        style = MaterialTheme.typography.bodyLarge,
-                        modifier = Modifier.padding(bottom = 8.dp),
-                    )
-                    val options = listOf(ThemeMode.SYSTEM, ThemeMode.LIGHT, ThemeMode.DARK)
-                    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                        options.forEachIndexed { index, mode ->
-                            SegmentedButton(
-                                selected = themeMode == mode,
-                                onClick = { onThemeModeChange(mode) },
-                                shape = when (index) {
-                                    0 -> RoundedCornerShape(topStart = 4.dp, bottomStart = 4.dp)
-                                    options.size - 1 -> RoundedCornerShape(topEnd = 4.dp, bottomEnd = 4.dp)
-                                    else -> RoundedCornerShape(0.dp)
-                                },
-                                label = {
-                                    Text(
-                                        when (mode) {
-                                            ThemeMode.SYSTEM -> "System"
-                                            ThemeMode.LIGHT -> "Light"
-                                            ThemeMode.DARK -> "Dark"
-                                        }
-                                    )
-                                },
-                            )
                         }
                     }
                 }
@@ -406,6 +374,38 @@ fun ProfileScreen(
                                     Text("Change password")
                                 }
                             }
+                        }
+                    }
+                }
+
+                // Appearance section
+                SectionCard(title = "Appearance") {
+                    Text(
+                        "Theme",
+                        style = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier.padding(bottom = 8.dp),
+                    )
+                    val options = listOf(ThemeMode.SYSTEM, ThemeMode.LIGHT, ThemeMode.DARK)
+                    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                        options.forEachIndexed { index, mode ->
+                            SegmentedButton(
+                                selected = themeMode == mode,
+                                onClick = { onThemeModeChange(mode) },
+                                shape = when (index) {
+                                    0 -> RoundedCornerShape(topStart = 4.dp, bottomStart = 4.dp)
+                                    options.size - 1 -> RoundedCornerShape(topEnd = 4.dp, bottomEnd = 4.dp)
+                                    else -> RoundedCornerShape(0.dp)
+                                },
+                                label = {
+                                    Text(
+                                        when (mode) {
+                                            ThemeMode.SYSTEM -> "System"
+                                            ThemeMode.LIGHT -> "Light"
+                                            ThemeMode.DARK -> "Dark"
+                                        }
+                                    )
+                                },
+                            )
                         }
                     }
                 }
