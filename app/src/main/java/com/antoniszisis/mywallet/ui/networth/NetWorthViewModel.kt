@@ -32,6 +32,7 @@ data class NetWorthUiState(
     val isLoading: Boolean = true,
     val error: String? = null,
     val snapshots: List<GetNetWorthSnapshotsQuery.Item> = emptyList(),
+    val trendSnapshots: List<GetNetWorthSnapshotsQuery.Item> = emptyList(),
     val totalCount: Int = 0,
     val currentPage: Int = 1,
     val showCreateDialog: Boolean = false,
@@ -61,6 +62,7 @@ class NetWorthViewModel @Inject constructor(
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         snapshots = data.items,
+                        trendSnapshots = if (page == 1) data.items else _uiState.value.trendSnapshots,
                         totalCount = data.totalCount,
                         currentPage = page,
                     )

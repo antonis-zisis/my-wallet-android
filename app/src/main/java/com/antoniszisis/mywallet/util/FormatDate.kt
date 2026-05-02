@@ -13,6 +13,7 @@ private val reportTitleOutputFormatter = DateTimeFormatter.ofPattern("MMM ''yy",
 
 private val displayFormatter = DateTimeFormatter.ofPattern("MMM d, yyyy")
 private val shortFormatter = DateTimeFormatter.ofPattern("MMM d")
+private val monthYearFormatter = DateTimeFormatter.ofPattern("MMM ''yy", Locale.ENGLISH)
 private val inputFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
 
 /** Parses any date string the backend may send: epoch-ms, ISO timestamp, or plain date. */
@@ -47,6 +48,14 @@ fun formatDate(isoString: String): String {
 fun formatDateShort(isoString: String): String {
     return try {
         parseToLocalDate(isoString).format(shortFormatter)
+    } catch (e: Exception) {
+        isoString
+    }
+}
+
+fun formatDateMonthYear(isoString: String): String {
+    return try {
+        parseToLocalDate(isoString).format(monthYearFormatter)
     } catch (e: Exception) {
         isoString
     }

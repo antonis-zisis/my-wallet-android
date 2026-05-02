@@ -1,6 +1,7 @@
 package com.antoniszisis.mywallet.ui.networth
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -44,13 +45,17 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -60,10 +65,28 @@ import com.antoniszisis.mywallet.ui.components.EmptyState
 import com.antoniszisis.mywallet.ui.components.ErrorMessage
 import com.antoniszisis.mywallet.ui.components.LoadingScreen
 import com.antoniszisis.mywallet.ui.components.PaginationControls
+import com.antoniszisis.mywallet.ui.theme.Green500
+import com.antoniszisis.mywallet.ui.theme.Red500
 import com.antoniszisis.mywallet.ui.theme.incomeColor
 import com.antoniszisis.mywallet.ui.theme.netWorthColor
 import com.antoniszisis.mywallet.util.formatDate
+import com.antoniszisis.mywallet.util.formatDateMonthYear
+import com.antoniszisis.mywallet.util.formatDateShort
 import com.antoniszisis.mywallet.util.formatMoney
+import com.antoniszisis.mywallet.util.formatMoneyCompact
+import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
+import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisLabelComponent
+import com.patrykandpatrick.vico.compose.cartesian.axis.rememberBottomAxis
+import com.patrykandpatrick.vico.compose.cartesian.axis.rememberStartAxis
+import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
+import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineSpec
+import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
+import com.patrykandpatrick.vico.compose.common.shader.color
+import com.patrykandpatrick.vico.compose.common.shader.verticalGradient
+import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModelProducer
+import com.patrykandpatrick.vico.core.cartesian.data.CartesianValueFormatter
+import com.patrykandpatrick.vico.core.cartesian.data.lineSeries
+import com.patrykandpatrick.vico.core.common.shader.DynamicShader
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -106,6 +129,11 @@ fun NetWorthScreen(
                         .padding(padding)
                 ) {
                     LazyColumn(modifier = Modifier.weight(1f)) {
+                        if (state.trendSnapshots.isNotEmpty()) {
+                            item(key = "chart") {
+                                NetWorthTrendChart(snapshots = state.trendSnapshots)
+                            }
+                        }
                         items(state.snapshots, key = { it.id }) { snapshot ->
                             SnapshotListItem(
                                 snapshot = snapshot,
@@ -129,7 +157,6 @@ fun NetWorthScreen(
         }
     }
 
-    // Create dialog
     if (state.showCreateDialog) {
         CreateSnapshotDialog(
             form = state.createForm,
@@ -143,7 +170,6 @@ fun NetWorthScreen(
         )
     }
 
-    // Delete confirm
     if (state.snapshotToDelete != null) {
         ConfirmDialog(
             title = "Delete Snapshot",
@@ -154,6 +180,115 @@ fun NetWorthScreen(
             onConfirm = viewModel::deleteSnapshot,
             onDismiss = viewModel::dismissDelete,
         )
+    }
+}
+
+@Composable
+private fun NetWorthTrendChart(
+    snapshots: List<GetNetWorthSnapshotsQuery.Item>,
+    modifier: Modifier = Modifier,
+) {
+    // Oldest first so the line reads left → right chronologically
+    val chartData = remember(snapshots) { snapshots.take(10).reversed() }
+
+    var selectedView by remember { mutableIntStateOf(0) } // 0 = Net Worth, 1 = Breakdown
+
+    val netWorthValues = remember(chartData) { chartData.map { it.netWorth } }
+    val assetsValues = remember(chartData) { chartData.map { it.totalAssets } }
+    val liabilitiesValues = remember(chartData) { chartData.map { it.totalLiabilities } }
+    val xLabels = remember(chartData) { chartData.map { formatDateMonthYear(it.createdAt) } }
+
+    val latestNetWorth = chartData.last().netWorth
+    val netWorthLineColor = if (latestNetWorth >= 0) Green500 else Red500
+
+    val modelProducer = remember { CartesianChartModelProducer.build() }
+
+    LaunchedEffect(selectedView, chartData) {
+        modelProducer.runTransaction {
+            when (selectedView) {
+                0 -> lineSeries { series(netWorthValues) }
+                else -> lineSeries {
+                    series(assetsValues)
+                    series(liabilitiesValues)
+                }
+            }
+        }
+    }
+
+    val xValueFormatter = remember(xLabels) {
+        CartesianValueFormatter { value, _, _ ->
+            xLabels.getOrElse(value.toInt()) { "" }
+        }
+    }
+    val yValueFormatter = remember {
+        CartesianValueFormatter { value, _, _ ->
+            formatMoneyCompact(value.toDouble())
+        }
+    }
+
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+        ),
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                listOf("Net Worth", "Breakdown").forEachIndexed { index, label ->
+                    SegmentedButton(
+                        selected = selectedView == index,
+                        onClick = { selectedView = index },
+                        shape = SegmentedButtonDefaults.itemShape(index = index, count = 2, baseShape = RoundedCornerShape(4.dp)),
+                    ) {
+                        Text(label, style = MaterialTheme.typography.labelSmall)
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            key(selectedView) {
+                val labelColor = MaterialTheme.colorScheme.onSurface
+                val axisLabel = rememberAxisLabelComponent(color = labelColor)
+
+                val netWorthLine = rememberLineSpec(
+                    shader = DynamicShader.color(netWorthLineColor),
+                    backgroundShader = DynamicShader.verticalGradient(
+                        arrayOf(netWorthLineColor.copy(alpha = 0.3f), Color.Transparent)
+                    ),
+                )
+                val assetsLine = rememberLineSpec(
+                    shader = DynamicShader.color(Green500),
+                    backgroundShader = DynamicShader.verticalGradient(
+                        arrayOf(Green500.copy(alpha = 0.3f), Color.Transparent)
+                    ),
+                )
+                val liabilitiesLine = rememberLineSpec(
+                    shader = DynamicShader.color(Red500),
+                    backgroundShader = DynamicShader.verticalGradient(
+                        arrayOf(Red500.copy(alpha = 0.3f), Color.Transparent)
+                    ),
+                )
+
+                val lineLayer = rememberLineCartesianLayer(
+                    lines = if (selectedView == 0) listOf(netWorthLine) else listOf(assetsLine, liabilitiesLine),
+                )
+
+                CartesianChartHost(
+                    chart = rememberCartesianChart(
+                        lineLayer,
+                        startAxis = rememberStartAxis(label = axisLabel, valueFormatter = yValueFormatter),
+                        bottomAxis = rememberBottomAxis(label = axisLabel, valueFormatter = xValueFormatter),
+                    ),
+                    modelProducer = modelProducer,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(180.dp),
+                )
+            }
+        }
     }
 }
 
@@ -235,7 +370,6 @@ private fun CreateSnapshotDialog(
                     modifier = Modifier.fillMaxWidth(),
                 )
 
-                // Totals preview
                 val totalAssets = form.entries
                     .filter { it.type == "ASSET" }
                     .sumOf { it.amount.toDoubleOrNull() ?: 0.0 }
@@ -253,7 +387,6 @@ private fun CreateSnapshotDialog(
 
                 HorizontalDivider()
 
-                // Entries
                 form.entries.forEach { entry ->
                     EntryRow(
                         entry = entry,
@@ -319,7 +452,7 @@ private fun EntryRow(
                             else LIABILITY_CATEGORIES.last()
                             onUpdate { copy(type = type, category = defaultCat) }
                         },
-                        shape = SegmentedButtonDefaults.itemShape(index = index, count = 2),
+                        shape = SegmentedButtonDefaults.itemShape(index = index, count = 2, baseShape = RoundedCornerShape(4.dp)),
                     ) {
                         Text(type.lowercase().replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.labelSmall)
                     }
@@ -356,7 +489,6 @@ private fun EntryRow(
                 modifier = Modifier.weight(1f),
             )
 
-            // Category dropdown
             val categories = if (entry.type == "ASSET") ASSET_CATEGORIES else LIABILITY_CATEGORIES
             var catExpanded by remember { mutableStateOf(false) }
             ExposedDropdownMenuBox(
