@@ -186,6 +186,7 @@ input NetWorthEntryInput {
 
 input CreateNetWorthSnapshotInput {
   title: String!
+  snapshotDate: String!
   entries: [NetWorthEntryInput!]!
 }
 

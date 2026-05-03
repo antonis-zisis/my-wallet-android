@@ -39,6 +39,7 @@ mutation CreateNetWorthSnapshot($input: CreateNetWorthSnapshotInput!) {
   createNetWorthSnapshot(input: $input) {
     id
     title
+    snapshotDate
     totalAssets
     totalLiabilities
     netWorth

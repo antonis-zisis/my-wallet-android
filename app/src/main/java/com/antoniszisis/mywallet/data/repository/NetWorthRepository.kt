@@ -39,6 +39,7 @@ class NetWorthRepository @Inject constructor(
 
     suspend fun createSnapshot(
         title: String,
+        snapshotDate: String,
         entries: List<NetWorthEntryInput>,
     ): Result<CreateNetWorthSnapshotMutation.CreateNetWorthSnapshot> {
         return try {
@@ -46,6 +47,7 @@ class NetWorthRepository @Inject constructor(
                 CreateNetWorthSnapshotMutation(
                     input = CreateNetWorthSnapshotInput(
                         title = title,
+                        snapshotDate = snapshotDate,
                         entries = entries,
                     )
                 )
