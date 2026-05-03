@@ -81,8 +81,7 @@ import com.antoniszisis.mywallet.ui.theme.Red500
 import com.antoniszisis.mywallet.ui.theme.incomeColor
 import com.antoniszisis.mywallet.ui.theme.netWorthColor
 import com.antoniszisis.mywallet.util.formatDate
-import com.antoniszisis.mywallet.util.formatDateMonthYear
-import com.antoniszisis.mywallet.util.formatDateShort
+import com.antoniszisis.mywallet.util.formatReportTitle
 import com.antoniszisis.mywallet.util.formatMoney
 import com.antoniszisis.mywallet.util.formatMoneyCompact
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
@@ -95,6 +94,7 @@ import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
 import com.patrykandpatrick.vico.compose.common.shader.color
 import com.patrykandpatrick.vico.compose.common.shader.verticalGradient
 import com.patrykandpatrick.vico.core.cartesian.HorizontalLayout
+import com.patrykandpatrick.vico.core.cartesian.axis.AxisItemPlacer
 import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModelProducer
 import com.patrykandpatrick.vico.core.cartesian.data.CartesianValueFormatter
 import com.patrykandpatrick.vico.core.cartesian.data.lineSeries
@@ -226,7 +226,7 @@ private fun NetWorthTrendChart(
     val netWorthValues = remember(chartData) { chartData.map { it.netWorth } }
     val assetsValues = remember(chartData) { chartData.map { it.totalAssets } }
     val liabilitiesValues = remember(chartData) { chartData.map { it.totalLiabilities } }
-    val xLabels = remember(chartData) { chartData.map { formatDateMonthYear(it.createdAt) } }
+    val xLabels = remember(chartData) { chartData.map { formatReportTitle(it.title) } }
 
     val latestNetWorth = chartData.last().netWorth
     val netWorthLineColor = if (latestNetWorth >= 0) Green500 else Red500
@@ -308,7 +308,7 @@ private fun NetWorthTrendChart(
             AnimatedVisibility(visible = isExpanded) {
                 Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp)) {
                     SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                        listOf("Net Worth", "Breakdown").forEachIndexed { index, label ->
+                        listOf("Net Worth", "Assets & Liabilities").forEachIndexed { index, label ->
                             SegmentedButton(
                                 selected = selectedView == index,
                                 onClick = { selectedView = index },
@@ -352,7 +352,7 @@ private fun NetWorthTrendChart(
                             chart = rememberCartesianChart(
                                 lineLayer,
                                 startAxis = rememberStartAxis(label = axisLabel, valueFormatter = yValueFormatter),
-                                bottomAxis = rememberBottomAxis(label = axisLabel, valueFormatter = xValueFormatter),
+                                bottomAxis = rememberBottomAxis(label = axisLabel, valueFormatter = xValueFormatter, itemPlacer = AxisItemPlacer.Horizontal.default(spacing = 1)),
                             ),
                             modelProducer = modelProducer,
                             horizontalLayout = HorizontalLayout.FullWidth(),
