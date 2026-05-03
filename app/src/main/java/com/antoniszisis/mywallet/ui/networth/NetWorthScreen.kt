@@ -111,7 +111,18 @@ fun NetWorthScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Net Worth") },
+                title = {
+                    Column {
+                        Text("Net Worth")
+                        if (!state.isLoading && state.error == null && state.totalCount > 0) {
+                            Text(
+                                text = if (state.totalCount == 1) "1 snapshot" else "${state.totalCount} snapshots",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background,
                 ),
