@@ -6,8 +6,10 @@ import com.antoniszisis.mywallet.graphql.CreateNetWorthSnapshotMutation
 import com.antoniszisis.mywallet.graphql.DeleteNetWorthSnapshotMutation
 import com.antoniszisis.mywallet.graphql.GetNetWorthSnapshotQuery
 import com.antoniszisis.mywallet.graphql.GetNetWorthSnapshotsQuery
+import com.antoniszisis.mywallet.graphql.UpdateNetWorthSnapshotMutation
 import com.antoniszisis.mywallet.graphql.type.CreateNetWorthSnapshotInput
 import com.antoniszisis.mywallet.graphql.type.NetWorthEntryInput
+import com.antoniszisis.mywallet.graphql.type.UpdateNetWorthSnapshotInput
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -53,6 +55,30 @@ class NetWorthRepository @Inject constructor(
                 )
             ).execute()
             val data = response.data?.createNetWorthSnapshot ?: error("Failed to create snapshot")
+            Result.success(data)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun updateSnapshot(
+        id: String,
+        title: String,
+        snapshotDate: String,
+        entries: List<NetWorthEntryInput>,
+    ): Result<UpdateNetWorthSnapshotMutation.UpdateNetWorthSnapshot> {
+        return try {
+            val response = apollo.mutation(
+                UpdateNetWorthSnapshotMutation(
+                    id = id,
+                    input = UpdateNetWorthSnapshotInput(
+                        title = title,
+                        snapshotDate = snapshotDate,
+                        entries = entries,
+                    )
+                )
+            ).execute()
+            val data = response.data?.updateNetWorthSnapshot ?: error("Failed to update snapshot")
             Result.success(data)
         } catch (e: Exception) {
             Result.failure(e)

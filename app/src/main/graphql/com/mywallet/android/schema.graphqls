@@ -30,6 +30,7 @@ type Mutation {
   resumeSubscription(input: ResumeSubscriptionInput!): AppSubscription!
   deleteSubscription(id: ID!): Boolean!
   createNetWorthSnapshot(input: CreateNetWorthSnapshotInput!): NetWorthSnapshot!
+  updateNetWorthSnapshot(id: ID!, input: UpdateNetWorthSnapshotInput!): NetWorthSnapshot!
   deleteNetWorthSnapshot(id: ID!): Boolean!
   updateMe(input: UpdateUserInput!): User!
 }
@@ -185,6 +186,12 @@ input NetWorthEntryInput {
 }
 
 input CreateNetWorthSnapshotInput {
+  title: String!
+  snapshotDate: String!
+  entries: [NetWorthEntryInput!]!
+}
+
+input UpdateNetWorthSnapshotInput {
   title: String!
   snapshotDate: String!
   entries: [NetWorthEntryInput!]!

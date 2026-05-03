@@ -10,6 +10,7 @@ import androidx.navigation.navArgument
 import com.antoniszisis.mywallet.ui.auth.LoginScreen
 import com.antoniszisis.mywallet.ui.home.HomeScreen
 import com.antoniszisis.mywallet.ui.networth.CreateNetWorthSnapshotScreen
+import com.antoniszisis.mywallet.ui.networth.EditNetWorthSnapshotScreen
 import com.antoniszisis.mywallet.ui.networth.NetWorthDetailScreen
 import com.antoniszisis.mywallet.ui.networth.NetWorthScreen
 import com.antoniszisis.mywallet.ui.profile.ProfileScreen
@@ -120,9 +121,34 @@ fun AppNavGraph(
             arguments = listOf(navArgument("snapshotId") { type = NavType.StringType })
         ) { backStackEntry ->
             val snapshotId = backStackEntry.arguments?.getString("snapshotId") ?: return@composable
+            val snapshotUpdated = backStackEntry.savedStateHandle
+                .getStateFlow("snapshotUpdated", false)
+                .collectAsState()
             NetWorthDetailScreen(
                 snapshotId = snapshotId,
                 onNavigateBack = { navController.popBackStack() },
+                needsRefresh = snapshotUpdated.value,
+                onRefreshConsumed = { backStackEntry.savedStateHandle["snapshotUpdated"] = false },
+                onNavigateToEdit = {
+                    navController.navigate(Screen.EditNetWorthSnapshot.createRoute(snapshotId))
+                },
+            )
+        }
+
+        composable(
+            route = Screen.EditNetWorthSnapshot.route,
+            arguments = listOf(navArgument("snapshotId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val snapshotId = backStackEntry.arguments?.getString("snapshotId") ?: return@composable
+            EditNetWorthSnapshotScreen(
+                snapshotId = snapshotId,
+                onNavigateBack = { navController.popBackStack() },
+                onSuccess = {
+                    navController.previousBackStackEntry
+                        ?.savedStateHandle
+                        ?.set("snapshotUpdated", true)
+                    navController.popBackStack()
+                },
             )
         }
 

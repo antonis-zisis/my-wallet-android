@@ -68,9 +68,18 @@ import com.antoniszisis.mywallet.util.formatMoney
 fun NetWorthDetailScreen(
     snapshotId: String,
     onNavigateBack: () -> Unit,
+    needsRefresh: Boolean = false,
+    onRefreshConsumed: () -> Unit = {},
+    onNavigateToEdit: () -> Unit = {},
     viewModel: NetWorthDetailViewModel = hiltViewModel(),
 ) {
     LaunchedEffect(snapshotId) { viewModel.init(snapshotId) }
+    LaunchedEffect(needsRefresh) {
+        if (needsRefresh) {
+            viewModel.init(snapshotId)
+            onRefreshConsumed()
+        }
+    }
     val state by viewModel.uiState.collectAsState()
     var showMenu by remember { mutableStateOf(false) }
 
@@ -106,7 +115,10 @@ fun NetWorthDetailScreen(
                         DropdownMenuItem(
                             text = { Text("Edit") },
                             leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },
-                            onClick = { showMenu = false },
+                            onClick = {
+                                showMenu = false
+                                onNavigateToEdit()
+                            },
                         )
                         DropdownMenuItem(
                             text = { Text("Delete", color = MaterialTheme.colorScheme.error) },

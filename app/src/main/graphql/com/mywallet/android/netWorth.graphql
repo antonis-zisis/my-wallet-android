@@ -20,6 +20,7 @@ query GetNetWorthSnapshot($id: ID!) {
   netWorthSnapshot(id: $id) {
     id
     title
+    snapshotDate
     totalAssets
     totalLiabilities
     netWorth
@@ -54,6 +55,18 @@ mutation CreateNetWorthSnapshot($input: CreateNetWorthSnapshotInput!) {
     totalLiabilities
     netWorth
     createdAt
+  }
+}
+
+mutation UpdateNetWorthSnapshot($id: ID!, $input: UpdateNetWorthSnapshotInput!) {
+  updateNetWorthSnapshot(id: $id, input: $input) {
+    id
+    title
+    snapshotDate
+    totalAssets
+    totalLiabilities
+    netWorth
+    updatedAt
   }
 }
 

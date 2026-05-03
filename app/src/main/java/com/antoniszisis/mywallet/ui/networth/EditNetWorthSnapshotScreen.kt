@@ -13,27 +13,19 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -45,16 +37,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.antoniszisis.mywallet.ui.components.ErrorMessage
+import com.antoniszisis.mywallet.ui.components.LoadingScreen
 import com.antoniszisis.mywallet.ui.theme.incomeColor
 import com.antoniszisis.mywallet.ui.theme.netWorthColor
 import com.antoniszisis.mywallet.util.formatMoney
@@ -65,12 +55,56 @@ import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CreateNetWorthSnapshotScreen(
+fun EditNetWorthSnapshotScreen(
+    snapshotId: String,
     onNavigateBack: () -> Unit,
     onSuccess: () -> Unit,
-    viewModel: CreateNetWorthSnapshotViewModel = hiltViewModel(),
+    viewModel: EditNetWorthSnapshotViewModel = hiltViewModel(),
 ) {
+    LaunchedEffect(snapshotId) { viewModel.init(snapshotId) }
     val state by viewModel.uiState.collectAsState()
+
+    if (state.isLoading) {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text("Edit Snapshot") },
+                    navigationIcon = {
+                        IconButton(onClick = onNavigateBack) {
+                            Icon(Icons.Default.Close, contentDescription = "Close")
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.background,
+                    ),
+                )
+            }
+        ) { padding ->
+            LoadingScreen(modifier = Modifier.padding(padding))
+        }
+        return
+    }
+
+    if (state.error != null && state.entries.isEmpty()) {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text("Edit Snapshot") },
+                    navigationIcon = {
+                        IconButton(onClick = onNavigateBack) {
+                            Icon(Icons.Default.Close, contentDescription = "Close")
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.background,
+                    ),
+                )
+            }
+        ) { padding ->
+            ErrorMessage(message = state.error!!, modifier = Modifier.padding(padding))
+        }
+        return
+    }
 
     val assetEntries = remember(state.entries) { state.entries.filter { it.type == "ASSET" } }
     val liabilityEntries = remember(state.entries) { state.entries.filter { it.type == "LIABILITY" } }
@@ -91,14 +125,14 @@ fun CreateNetWorthSnapshotScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("New Snapshot") },
+                title = { Text("Edit Snapshot") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.Default.Close, contentDescription = "Close")
                     }
                 },
                 actions = {
-                    if (state.isCreating) {
+                    if (state.isSaving) {
                         Box(
                             modifier = Modifier
                                 .padding(end = 16.dp)
@@ -109,10 +143,10 @@ fun CreateNetWorthSnapshotScreen(
                         }
                     } else {
                         TextButton(
-                            onClick = { viewModel.createSnapshot(onSuccess) },
+                            onClick = { viewModel.updateSnapshot(snapshotId, onSuccess) },
                             enabled = isValid,
                         ) {
-                            Text("Create", fontWeight = FontWeight.SemiBold)
+                            Text("Save", fontWeight = FontWeight.SemiBold)
                         }
                     }
                 },
@@ -132,7 +166,6 @@ fun CreateNetWorthSnapshotScreen(
         ) {
             Spacer(modifier = Modifier.height(4.dp))
 
-            // Title & Date
             Card(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
@@ -145,7 +178,6 @@ fun CreateNetWorthSnapshotScreen(
                         value = state.title,
                         onValueChange = viewModel::onTitleChange,
                         label = { Text("Snapshot Title") },
-                        placeholder = { Text("e.g. ${generateSnapshotTitle(state.snapshotDate)}") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                     )
@@ -167,7 +199,6 @@ fun CreateNetWorthSnapshotScreen(
                 }
             }
 
-            // Summary — only visible when at least one amount is entered
             if (hasSomeAmount) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -196,7 +227,6 @@ fun CreateNetWorthSnapshotScreen(
                 }
             }
 
-            // Assets section
             EntriesSection(
                 title = "Assets",
                 total = if (hasSomeAmount) totalAssets else null,
@@ -209,7 +239,6 @@ fun CreateNetWorthSnapshotScreen(
                 onRemoveEntry = viewModel::removeEntry,
             )
 
-            // Liabilities section
             EntriesSection(
                 title = "Liabilities",
                 total = if (hasSomeAmount) totalLiabilities else null,
@@ -267,183 +296,6 @@ fun CreateNetWorthSnapshotScreen(
             },
         ) {
             DatePicker(state = datePickerState)
-        }
-    }
-}
-
-@Composable
-internal fun SummaryCard(
-    label: String,
-    value: String,
-    color: Color,
-    modifier: Modifier = Modifier,
-) {
-    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(
-            text = value,
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.Bold,
-            color = color,
-        )
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-}
-
-@Composable
-internal fun EntriesSection(
-    title: String,
-    total: Double?,
-    totalColor: Color,
-    onAdd: () -> Unit,
-    emptyLabel: String,
-    entries: List<EntryDraft>,
-    totalEntries: Int,
-    onUpdateEntry: (String, EntryDraft.() -> EntryDraft) -> Unit,
-    onRemoveEntry: (String) -> Unit,
-) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column {
-                    Text(
-                        title.uppercase(),
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    if (total != null) {
-                        Text(
-                            formatMoney(total),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = totalColor,
-                            fontWeight = FontWeight.Medium,
-                        )
-                    }
-                }
-                IconButton(onClick = onAdd) {
-                    Icon(
-                        Icons.Default.AddCircle,
-                        contentDescription = "Add $title entry",
-                        tint = MaterialTheme.colorScheme.primary,
-                    )
-                }
-            }
-
-            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-
-            if (entries.isEmpty()) {
-                Text(
-                    emptyLabel,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(vertical = 4.dp),
-                )
-            } else {
-                entries.forEachIndexed { index, entry ->
-                    if (index > 0) HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-                    EntryRow(
-                        entry = entry,
-                        onUpdate = { update -> onUpdateEntry(entry.id) { update() } },
-                        onRemove = { onRemoveEntry(entry.id) },
-                        canRemove = totalEntries > 1,
-                    )
-                }
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-internal fun EntryRow(
-    entry: EntryDraft,
-    onUpdate: (EntryDraft.() -> EntryDraft) -> Unit,
-    onRemove: () -> Unit,
-    canRemove: Boolean,
-) {
-    val categories = if (entry.type == "ASSET") ASSET_CATEGORIES else LIABILITY_CATEGORIES
-    var catExpanded by remember { mutableStateOf(false) }
-
-    Column(
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = Modifier.padding(vertical = 4.dp),
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            OutlinedTextField(
-                value = entry.label,
-                onValueChange = { onUpdate { copy(label = it) } },
-                label = { Text("Label") },
-                placeholder = { Text("e.g. Savings Account") },
-                singleLine = true,
-                modifier = Modifier.weight(1f),
-            )
-            if (canRemove) {
-                IconButton(onClick = onRemove) {
-                    Icon(
-                        Icons.Default.Remove,
-                        contentDescription = "Remove entry",
-                        tint = MaterialTheme.colorScheme.error,
-                    )
-                }
-            }
-        }
-
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedTextField(
-                value = entry.amount,
-                onValueChange = { onUpdate { copy(amount = it) } },
-                label = { Text("Amount") },
-                placeholder = { Text("0.00") },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                modifier = Modifier.weight(1f),
-            )
-
-            ExposedDropdownMenuBox(
-                expanded = catExpanded,
-                onExpandedChange = { catExpanded = it },
-                modifier = Modifier.weight(1f),
-            ) {
-                OutlinedTextField(
-                    value = entry.category,
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text("Category") },
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = catExpanded) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .menuAnchor(MenuAnchorType.PrimaryNotEditable),
-                )
-                ExposedDropdownMenu(
-                    expanded = catExpanded,
-                    onDismissRequest = { catExpanded = false },
-                ) {
-                    categories.forEach { cat ->
-                        DropdownMenuItem(
-                            text = { Text(cat) },
-                            onClick = {
-                                onUpdate { copy(category = cat) }
-                                catExpanded = false
-                            },
-                        )
-                    }
-                }
-            }
         }
     }
 }
