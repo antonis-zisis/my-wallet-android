@@ -19,7 +19,7 @@ An Android application for personal budgeting, mirroring the [my-wallet](https:/
 - **Reports** — paginated list, create/rename/lock/delete reports
 - **Transactions** — add/edit/delete within a report (income & expense categories)
 - **Subscriptions** — active/inactive lists, create/edit/cancel/resume/delete, monthly & yearly cost summary cards, billing cycle badges, next renewal date
-- **Net Worth** — snapshot list, create snapshots with asset/liability entries, detail view
+- **Net Worth** — snapshot list, create/edit snapshots with asset/liability entries, detail view with per-entry percentage share and delta from previous snapshot
 - **Profile** — edit full name, change password, sign out
 - **Authentication** — Supabase email/password login with session restore on launch
 
@@ -127,7 +127,7 @@ app/src/main/
 │   │   ├── home/                # HomeScreen (dashboard) + HomeViewModel
 │   │   ├── reports/             # ReportsScreen, ReportDetailScreen + ViewModels
 │   │   ├── subscriptions/       # SubscriptionsScreen + ViewModel
-│   │   ├── networth/            # NetWorthScreen, NetWorthDetailScreen + ViewModels
+│   │   ├── networth/            # NetWorthScreen, NetWorthDetailScreen, CreateNetWorthSnapshotScreen, EditNetWorthSnapshotScreen + ViewModels
 │   │   └── profile/             # ProfileScreen + ProfileViewModel
 │   └── util/
 │       ├── FormatMoney.kt       # Currency formatting

@@ -1,6 +1,7 @@
 package com.antoniszisis.mywallet.ui.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -8,6 +9,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.antoniszisis.mywallet.ui.auth.LoginScreen
 import com.antoniszisis.mywallet.ui.home.HomeScreen
+import com.antoniszisis.mywallet.ui.networth.CreateNetWorthSnapshotScreen
+import com.antoniszisis.mywallet.ui.networth.EditNetWorthSnapshotScreen
 import com.antoniszisis.mywallet.ui.networth.NetWorthDetailScreen
 import com.antoniszisis.mywallet.ui.networth.NetWorthScreen
 import com.antoniszisis.mywallet.ui.profile.ProfileScreen
@@ -82,11 +85,34 @@ fun AppNavGraph(
             SubscriptionsScreen()
         }
 
-        composable(Screen.NetWorth.route) {
+        composable(Screen.NetWorth.route) { backStackEntry ->
+            val snapshotCreated = backStackEntry.savedStateHandle
+                .getStateFlow("snapshotCreated", false)
+                .collectAsState()
+
             NetWorthScreen(
                 onNavigateToDetail = { snapshotId ->
                     navController.navigate(Screen.NetWorthDetail.createRoute(snapshotId))
-                }
+                },
+                onNavigateToCreate = {
+                    navController.navigate(Screen.CreateNetWorthSnapshot.route)
+                },
+                needsRefresh = snapshotCreated.value,
+                onRefreshConsumed = {
+                    backStackEntry.savedStateHandle["snapshotCreated"] = false
+                },
+            )
+        }
+
+        composable(Screen.CreateNetWorthSnapshot.route) {
+            CreateNetWorthSnapshotScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onSuccess = {
+                    navController.previousBackStackEntry
+                        ?.savedStateHandle
+                        ?.set("snapshotCreated", true)
+                    navController.popBackStack()
+                },
             )
         }
 
@@ -95,9 +121,34 @@ fun AppNavGraph(
             arguments = listOf(navArgument("snapshotId") { type = NavType.StringType })
         ) { backStackEntry ->
             val snapshotId = backStackEntry.arguments?.getString("snapshotId") ?: return@composable
+            val snapshotUpdated = backStackEntry.savedStateHandle
+                .getStateFlow("snapshotUpdated", false)
+                .collectAsState()
             NetWorthDetailScreen(
                 snapshotId = snapshotId,
                 onNavigateBack = { navController.popBackStack() },
+                needsRefresh = snapshotUpdated.value,
+                onRefreshConsumed = { backStackEntry.savedStateHandle["snapshotUpdated"] = false },
+                onNavigateToEdit = {
+                    navController.navigate(Screen.EditNetWorthSnapshot.createRoute(snapshotId))
+                },
+            )
+        }
+
+        composable(
+            route = Screen.EditNetWorthSnapshot.route,
+            arguments = listOf(navArgument("snapshotId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val snapshotId = backStackEntry.arguments?.getString("snapshotId") ?: return@composable
+            EditNetWorthSnapshotScreen(
+                snapshotId = snapshotId,
+                onNavigateBack = { navController.popBackStack() },
+                onSuccess = {
+                    navController.previousBackStackEntry
+                        ?.savedStateHandle
+                        ?.set("snapshotUpdated", true)
+                    navController.popBackStack()
+                },
             )
         }
 
