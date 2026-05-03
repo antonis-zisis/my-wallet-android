@@ -9,12 +9,14 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
@@ -25,18 +27,24 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
@@ -45,6 +53,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.antoniszisis.mywallet.graphql.GetNetWorthSnapshotQuery
+import java.util.Locale
 import com.antoniszisis.mywallet.ui.components.ConfirmDialog
 import com.antoniszisis.mywallet.ui.components.ErrorMessage
 import com.antoniszisis.mywallet.ui.components.LoadingScreen
@@ -141,15 +150,35 @@ fun NetWorthDetailScreen(
                 ) {
                     // Summary cards
                     item {
+                        val prev = snapshot.previousSnapshot
+                        val summaryCards = listOf(
+                            SummaryCardData(
+                                label = "Net Worth",
+                                value = formatMoney(kotlin.math.abs(snapshot.netWorth)),
+                                color = netWorthColor(snapshot.netWorth >= 0),
+                                diff = prev?.let { buildDiff(snapshot.netWorth, it.netWorth) },
+                                diffColor = prev?.let { if (snapshot.netWorth >= it.netWorth) incomeColor() else MaterialTheme.colorScheme.error },
+                            ),
+                            SummaryCardData(
+                                label = "Assets",
+                                value = formatMoney(snapshot.totalAssets),
+                                color = incomeColor(),
+                                diff = prev?.let { buildDiff(snapshot.totalAssets, it.totalAssets) },
+                                diffColor = prev?.let { if (snapshot.totalAssets >= it.totalAssets) incomeColor() else MaterialTheme.colorScheme.error },
+                            ),
+                            SummaryCardData(
+                                label = "Liabilities",
+                                value = formatMoney(snapshot.totalLiabilities),
+                                color = expenseColor(),
+                                diff = prev?.let { buildDiff(snapshot.totalLiabilities, it.totalLiabilities) },
+                                diffColor = prev?.let { if (snapshot.totalLiabilities <= it.totalLiabilities) incomeColor() else MaterialTheme.colorScheme.error },
+                            ),
+                        )
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
-                            listOf(
-                                Triple("Net Worth", formatMoney(kotlin.math.abs(snapshot.netWorth)), netWorthColor(snapshot.netWorth >= 0)),
-                                Triple("Assets", formatMoney(snapshot.totalAssets), incomeColor()),
-                                Triple("Liabilities", formatMoney(snapshot.totalLiabilities), expenseColor()),
-                            ).forEach { (label, value, color) ->
+                            summaryCards.forEach { card ->
                                 Card(
                                     modifier = Modifier.weight(1f),
                                     colors = CardDefaults.cardColors(
@@ -158,9 +187,11 @@ fun NetWorthDetailScreen(
                                     elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
                                 ) {
                                     NetWorthStat(
-                                        label = label,
-                                        value = value,
-                                        color = color,
+                                        label = card.label,
+                                        value = card.value,
+                                        color = card.color,
+                                        diff = card.diff,
+                                        diffColor = card.diffColor,
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .padding(12.dp),
@@ -314,24 +345,71 @@ private fun CollapsibleEntriesCard(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun NetWorthStat(
     label: String,
     value: String,
     color: Color,
+    diff: String? = null,
+    diffColor: Color? = null,
     modifier: Modifier = Modifier,
 ) {
+    val tooltipState = rememberTooltipState()
+    val scope = rememberCoroutineScope()
+
     Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(
-            text = value,
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.Bold,
-            color = color,
-        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = color,
+            )
+            if (diff != null && diffColor != null) {
+                TooltipBox(
+                    positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
+                    tooltip = { PlainTooltip { Text(diff) } },
+                    state = tooltipState,
+                    enableUserInput = false,
+                ) {
+                    IconButton(
+                        onClick = { scope.launch { tooltipState.show() } },
+                        modifier = Modifier.size(20.dp),
+                    ) {
+                        Icon(
+                            Icons.Default.Info,
+                            contentDescription = "Change from previous snapshot",
+                            modifier = Modifier.size(13.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+        }
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
+}
+
+private data class SummaryCardData(
+    val label: String,
+    val value: String,
+    val color: Color,
+    val diff: String?,
+    val diffColor: Color?,
+)
+
+private fun buildDiff(current: Double, previous: Double): String {
+    val diff = current - previous
+    val sign = if (diff >= 0) "+" else "-"
+    val pct = if (previous != 0.0) kotlin.math.abs(diff / previous * 100) else null
+    val pctStr = if (pct != null) " (${sign}${String.format(Locale.US, "%.1f", pct)}%)" else ""
+    return "${sign}${formatMoney(kotlin.math.abs(diff))}${pctStr}"
 }

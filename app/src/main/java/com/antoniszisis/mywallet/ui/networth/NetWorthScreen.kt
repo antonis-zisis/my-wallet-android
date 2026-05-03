@@ -379,12 +379,23 @@ private fun SnapshotListItem(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                Text(
-                    "Net Worth: ${if (netWorthPositive) "+" else "-"}${formatMoney(kotlin.math.abs(snapshot.netWorth))}",
-                    style = MaterialTheme.typography.bodySmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = netWorthColor(netWorthPositive),
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(2.dp),
+                ) {
+                    Text(
+                        "Net Worth:",
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        "${if (netWorthPositive) "+" else "-"}${formatMoney(kotlin.math.abs(snapshot.netWorth))}",
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = netWorthColor(netWorthPositive),
+                    )
+                }
                 Text("·", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 when {
                     delta == null -> Text(

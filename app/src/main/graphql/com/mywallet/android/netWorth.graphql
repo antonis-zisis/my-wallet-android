@@ -23,6 +23,11 @@ query GetNetWorthSnapshot($id: ID!) {
     totalAssets
     totalLiabilities
     netWorth
+    previousSnapshot {
+      totalAssets
+      totalLiabilities
+      netWorth
+    }
     entries {
       id
       type
