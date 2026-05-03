@@ -1,20 +1,25 @@
 package com.antoniszisis.mywallet.ui.networth
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -28,11 +33,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.antoniszisis.mywallet.graphql.GetNetWorthSnapshotQuery
 import com.antoniszisis.mywallet.ui.components.ConfirmDialog
 import com.antoniszisis.mywallet.ui.components.ErrorMessage
 import com.antoniszisis.mywallet.ui.components.LoadingScreen
@@ -51,6 +62,7 @@ fun NetWorthDetailScreen(
 ) {
     LaunchedEffect(snapshotId) { viewModel.init(snapshotId) }
     val state by viewModel.uiState.collectAsState()
+    var showMenu by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -74,11 +86,31 @@ fun NetWorthDetailScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = viewModel::showDeleteConfirm) {
-                        Icon(
-                            Icons.Default.Delete,
-                            contentDescription = "Delete snapshot",
-                            tint = MaterialTheme.colorScheme.error,
+                    IconButton(onClick = { showMenu = true }) {
+                        Icon(Icons.Default.MoreVert, contentDescription = "More options")
+                    }
+                    DropdownMenu(
+                        expanded = showMenu,
+                        onDismissRequest = { showMenu = false },
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Edit") },
+                            leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },
+                            onClick = { showMenu = false },
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Delete", color = MaterialTheme.colorScheme.error) },
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Default.Delete,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.error,
+                                )
+                            },
+                            onClick = {
+                                showMenu = false
+                                viewModel.showDeleteConfirm()
+                            },
                         )
                     }
                 },
@@ -140,71 +172,28 @@ fun NetWorthDetailScreen(
                     // Assets section
                     if (assets.isNotEmpty()) {
                         item {
-                            Text(
-                                "Assets",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = incomeColor(),
+                            CollapsibleEntriesCard(
+                                title = "Assets",
+                                total = formatMoney(snapshot.totalAssets),
+                                titleColor = incomeColor(),
+                                entries = assets,
+                                entryColor = incomeColor(),
+                                categoryOrder = ASSET_CATEGORIES,
                             )
-                        }
-                        items(assets, key = { it.id }) { entry ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 4.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                            ) {
-                                Column {
-                                    Text(entry.label, style = MaterialTheme.typography.bodyMedium)
-                                    Text(
-                                        entry.category,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                                Text(
-                                    formatMoney(entry.amount),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.Medium,
-                                    color = incomeColor(),
-                                )
-                            }
-                            HorizontalDivider()
                         }
                     }
 
                     // Liabilities section
                     if (liabilities.isNotEmpty()) {
                         item {
-                            Spacer(Modifier.height(4.dp))
-                            Text(
-                                "Liabilities",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = expenseColor(),
+                            CollapsibleEntriesCard(
+                                title = "Liabilities",
+                                total = formatMoney(snapshot.totalLiabilities),
+                                titleColor = expenseColor(),
+                                entries = liabilities,
+                                entryColor = expenseColor(),
+                                categoryOrder = LIABILITY_CATEGORIES,
                             )
-                        }
-                        items(liabilities, key = { it.id }) { entry ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 4.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                            ) {
-                                Column {
-                                    Text(entry.label, style = MaterialTheme.typography.bodyMedium)
-                                    Text(
-                                        entry.category,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                                Text(
-                                    formatMoney(entry.amount),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.Medium,
-                                    color = expenseColor(),
-                                )
-                            }
-                            HorizontalDivider()
                         }
                     }
                 }
@@ -226,10 +215,101 @@ fun NetWorthDetailScreen(
 }
 
 @Composable
+private fun CollapsibleEntriesCard(
+    title: String,
+    total: String,
+    titleColor: Color,
+    entries: List<GetNetWorthSnapshotQuery.Entry>,
+    entryColor: Color,
+    categoryOrder: List<String>,
+) {
+    var expanded by remember { mutableStateOf(true) }
+    val chevronRotation by animateFloatAsState(targetValue = if (expanded) 180f else 0f, label = "chevron")
+
+    val grouped = entries.groupBy { it.category }
+    val orderedCategories = categoryOrder.filter { it in grouped } +
+        grouped.keys.filterNot { it in categoryOrder }
+
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { expanded = !expanded },
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column {
+                    Text(
+                        title.uppercase(),
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        total,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = titleColor,
+                        fontWeight = FontWeight.Medium,
+                    )
+                }
+                Icon(
+                    Icons.Default.KeyboardArrowDown,
+                    contentDescription = if (expanded) "Collapse" else "Expand",
+                    modifier = Modifier.rotate(chevronRotation),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
+            AnimatedVisibility(visible = expanded) {
+                Column {
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                    orderedCategories.forEachIndexed { groupIndex, category ->
+                        val categoryEntries = grouped[category] ?: return@forEachIndexed
+                        if (groupIndex > 0) HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                        Text(
+                            text = category.uppercase(),
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(bottom = 4.dp),
+                        )
+                        categoryEntries.forEach { entry ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 6.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Text(
+                                    entry.label,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    modifier = Modifier.weight(1f),
+                                )
+                                Text(
+                                    formatMoney(entry.amount),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Medium,
+                                    color = entryColor,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun NetWorthStat(
     label: String,
     value: String,
-    color: androidx.compose.ui.graphics.Color,
+    color: Color,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
