@@ -1,5 +1,7 @@
 package com.antoniszisis.mywallet.ui.networth
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Arrangement
@@ -20,6 +22,8 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -36,14 +40,18 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -52,7 +60,10 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -83,6 +94,7 @@ import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineSpec
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
 import com.patrykandpatrick.vico.compose.common.shader.color
 import com.patrykandpatrick.vico.compose.common.shader.verticalGradient
+import com.patrykandpatrick.vico.core.cartesian.HorizontalLayout
 import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModelProducer
 import com.patrykandpatrick.vico.core.cartesian.data.CartesianValueFormatter
 import com.patrykandpatrick.vico.core.cartesian.data.lineSeries
@@ -183,13 +195,20 @@ fun NetWorthScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun NetWorthTrendChart(
     snapshots: List<GetNetWorthSnapshotsQuery.Item>,
     modifier: Modifier = Modifier,
 ) {
+    val chartCount = 5
     // Oldest first so the line reads left → right chronologically
-    val chartData = remember(snapshots) { snapshots.take(10).reversed() }
+    val chartData = remember(snapshots) { snapshots.take(chartCount).reversed() }
+
+    var isExpanded by remember { mutableStateOf(false) }
+    val tooltipState = rememberTooltipState()
+    val coroutineScope = rememberCoroutineScope()
+    val chevronRotation by animateFloatAsState(if (isExpanded) 180f else 0f, label = "chevron")
 
     var selectedView by remember { mutableIntStateOf(0) } // 0 = Net Worth, 1 = Breakdown
 
@@ -233,60 +252,105 @@ private fun NetWorthTrendChart(
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface,
         ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                listOf("Net Worth", "Breakdown").forEachIndexed { index, label ->
-                    SegmentedButton(
-                        selected = selectedView == index,
-                        onClick = { selectedView = index },
-                        shape = SegmentedButtonDefaults.itemShape(index = index, count = 2, baseShape = RoundedCornerShape(4.dp)),
-                    ) {
-                        Text(label, style = MaterialTheme.typography.labelSmall)
-                    }
+        Column {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Row(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { isExpanded = !isExpanded },
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text("Net Worth Over Time", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                 }
+                TooltipBox(
+                    positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
+                    tooltip = { PlainTooltip { Text("Shows the $chartCount most recent snapshots, from oldest to newest.") } },
+                    state = tooltipState,
+                ) {
+                    Icon(
+                        Icons.Default.Info,
+                        contentDescription = "Chart info",
+                        modifier = Modifier
+                            .padding(horizontal = 6.dp)
+                            .size(14.dp)
+                            .clickable { coroutineScope.launch { tooltipState.show() } },
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Icon(
+                    Icons.Default.KeyboardArrowDown,
+                    contentDescription = if (isExpanded) "Collapse" else "Expand",
+                    modifier = Modifier
+                        .rotate(chevronRotation)
+                        .clickable { isExpanded = !isExpanded },
+                )
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            AnimatedVisibility(visible = isExpanded) {
+                Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp)) {
+                    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                        listOf("Net Worth", "Breakdown").forEachIndexed { index, label ->
+                            SegmentedButton(
+                                selected = selectedView == index,
+                                onClick = { selectedView = index },
+                                shape = SegmentedButtonDefaults.itemShape(index = index, count = 2, baseShape = RoundedCornerShape(4.dp)),
+                            ) {
+                                Text(label, style = MaterialTheme.typography.labelSmall)
+                            }
+                        }
+                    }
 
-            key(selectedView) {
-                val labelColor = MaterialTheme.colorScheme.onSurface
-                val axisLabel = rememberAxisLabelComponent(color = labelColor)
+                    Spacer(modifier = Modifier.height(12.dp))
 
-                val netWorthLine = rememberLineSpec(
-                    shader = DynamicShader.color(netWorthLineColor),
-                    backgroundShader = DynamicShader.verticalGradient(
-                        arrayOf(netWorthLineColor.copy(alpha = 0.3f), Color.Transparent)
-                    ),
-                )
-                val assetsLine = rememberLineSpec(
-                    shader = DynamicShader.color(Green500),
-                    backgroundShader = DynamicShader.verticalGradient(
-                        arrayOf(Green500.copy(alpha = 0.3f), Color.Transparent)
-                    ),
-                )
-                val liabilitiesLine = rememberLineSpec(
-                    shader = DynamicShader.color(Red500),
-                    backgroundShader = DynamicShader.verticalGradient(
-                        arrayOf(Red500.copy(alpha = 0.3f), Color.Transparent)
-                    ),
-                )
+                    key(selectedView) {
+                        val labelColor = MaterialTheme.colorScheme.onSurface
+                        val axisLabel = rememberAxisLabelComponent(color = labelColor)
 
-                val lineLayer = rememberLineCartesianLayer(
-                    lines = if (selectedView == 0) listOf(netWorthLine) else listOf(assetsLine, liabilitiesLine),
-                )
+                        val netWorthLine = rememberLineSpec(
+                            shader = DynamicShader.color(netWorthLineColor),
+                            backgroundShader = DynamicShader.verticalGradient(
+                                arrayOf(netWorthLineColor.copy(alpha = 0.3f), Color.Transparent)
+                            ),
+                        )
+                        val assetsLine = rememberLineSpec(
+                            shader = DynamicShader.color(Green500),
+                            backgroundShader = DynamicShader.verticalGradient(
+                                arrayOf(Green500.copy(alpha = 0.3f), Color.Transparent)
+                            ),
+                        )
+                        val liabilitiesLine = rememberLineSpec(
+                            shader = DynamicShader.color(Red500),
+                            backgroundShader = DynamicShader.verticalGradient(
+                                arrayOf(Red500.copy(alpha = 0.3f), Color.Transparent)
+                            ),
+                        )
 
-                CartesianChartHost(
-                    chart = rememberCartesianChart(
-                        lineLayer,
-                        startAxis = rememberStartAxis(label = axisLabel, valueFormatter = yValueFormatter),
-                        bottomAxis = rememberBottomAxis(label = axisLabel, valueFormatter = xValueFormatter),
-                    ),
-                    modelProducer = modelProducer,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(180.dp),
-                )
+                        val lineLayer = rememberLineCartesianLayer(
+                            lines = if (selectedView == 0) listOf(netWorthLine) else listOf(assetsLine, liabilitiesLine),
+                        )
+
+                        CartesianChartHost(
+                            chart = rememberCartesianChart(
+                                lineLayer,
+                                startAxis = rememberStartAxis(label = axisLabel, valueFormatter = yValueFormatter),
+                                bottomAxis = rememberBottomAxis(label = axisLabel, valueFormatter = xValueFormatter),
+                            ),
+                            modelProducer = modelProducer,
+                            horizontalLayout = HorizontalLayout.FullWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(180.dp),
+                        )
+                    }
+                }
             }
         }
     }
