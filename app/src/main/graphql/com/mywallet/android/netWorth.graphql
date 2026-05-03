@@ -27,6 +27,11 @@ query GetNetWorthSnapshot($id: ID!) {
       totalAssets
       totalLiabilities
       netWorth
+      entries {
+        type
+        label
+        amount
+      }
     }
     entries {
       id

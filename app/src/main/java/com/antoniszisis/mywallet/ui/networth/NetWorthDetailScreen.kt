@@ -204,12 +204,17 @@ fun NetWorthDetailScreen(
                     // Assets section
                     if (assets.isNotEmpty()) {
                         item {
+                            val prevAssets = snapshot.previousSnapshot?.entries
+                                ?.filter { it.type == "ASSET" } ?: emptyList()
                             CollapsibleEntriesCard(
                                 title = "Assets",
                                 total = formatMoney(snapshot.totalAssets),
+                                totalAmount = snapshot.totalAssets,
                                 titleColor = incomeColor(),
                                 entries = assets,
+                                previousEntries = prevAssets,
                                 entryColor = incomeColor(),
+                                positiveIsGood = true,
                                 categoryOrder = ASSET_CATEGORIES,
                             )
                         }
@@ -218,12 +223,17 @@ fun NetWorthDetailScreen(
                     // Liabilities section
                     if (liabilities.isNotEmpty()) {
                         item {
+                            val prevLiabilities = snapshot.previousSnapshot?.entries
+                                ?.filter { it.type == "LIABILITY" } ?: emptyList()
                             CollapsibleEntriesCard(
                                 title = "Liabilities",
                                 total = formatMoney(snapshot.totalLiabilities),
+                                totalAmount = snapshot.totalLiabilities,
                                 titleColor = expenseColor(),
                                 entries = liabilities,
+                                previousEntries = prevLiabilities,
                                 entryColor = expenseColor(),
+                                positiveIsGood = false,
                                 categoryOrder = LIABILITY_CATEGORIES,
                             )
                         }
@@ -246,13 +256,17 @@ fun NetWorthDetailScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun CollapsibleEntriesCard(
     title: String,
     total: String,
+    totalAmount: Double,
     titleColor: Color,
-    entries: List<GetNetWorthSnapshotQuery.Entry>,
+    entries: List<GetNetWorthSnapshotQuery.Entry1>,
+    previousEntries: List<GetNetWorthSnapshotQuery.Entry>,
     entryColor: Color,
+    positiveIsGood: Boolean,
     categoryOrder: List<String>,
 ) {
     var expanded by remember { mutableStateOf(true) }
@@ -316,6 +330,10 @@ private fun CollapsibleEntriesCard(
                                     modifier = Modifier.padding(bottom = 4.dp),
                                 )
                                 categoryEntries.forEach { entry ->
+                                    val pct = if (totalAmount != 0.0)
+                                        String.format(Locale.US, "%.1f", entry.amount / totalAmount * 100)
+                                    else null
+                                    val prevEntry = previousEntries.find { it.label == entry.label }
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
@@ -328,12 +346,28 @@ private fun CollapsibleEntriesCard(
                                             style = MaterialTheme.typography.bodyMedium,
                                             modifier = Modifier.weight(1f),
                                         )
-                                        Text(
-                                            formatMoney(entry.amount),
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            fontWeight = FontWeight.Medium,
-                                            color = entryColor,
-                                        )
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Text(
+                                                formatMoney(entry.amount),
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                fontWeight = FontWeight.Medium,
+                                                color = entryColor,
+                                            )
+                                            if (pct != null) {
+                                                Text(
+                                                    " ($pct%)",
+                                                    style = MaterialTheme.typography.bodyMedium,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                )
+                                            }
+                                            if (prevEntry != null) {
+                                                EntryDeltaIcon(
+                                                    current = entry.amount,
+                                                    previous = prevEntry.amount,
+                                                    positiveIsGood = positiveIsGood,
+                                                )
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -341,6 +375,52 @@ private fun CollapsibleEntriesCard(
                     }
                 }
             }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun EntryDeltaIcon(
+    current: Double,
+    previous: Double,
+    positiveIsGood: Boolean,
+) {
+    val delta = current - previous
+    if (delta == 0.0) return
+
+    val sign = if (delta >= 0) "+" else "-"
+    val absDelta = kotlin.math.abs(delta)
+    val pctDelta = if (previous != 0.0)
+        " (${sign}${String.format(Locale.US, "%.1f", kotlin.math.abs(delta / previous * 100))}%)"
+    else ""
+    val deltaText = "${sign}${formatMoney(absDelta)}${pctDelta}"
+    val deltaColor = if ((delta > 0) == positiveIsGood)
+        incomeColor() else MaterialTheme.colorScheme.error
+
+    val tooltipState = rememberTooltipState()
+    val scope = rememberCoroutineScope()
+
+    TooltipBox(
+        positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
+        tooltip = {
+            PlainTooltip {
+                Text(deltaText, color = deltaColor)
+            }
+        },
+        state = tooltipState,
+        enableUserInput = false,
+    ) {
+        IconButton(
+            onClick = { scope.launch { tooltipState.show() } },
+            modifier = Modifier.size(20.dp),
+        ) {
+            Icon(
+                Icons.Default.Info,
+                contentDescription = "Change from previous snapshot",
+                modifier = Modifier.size(13.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }
