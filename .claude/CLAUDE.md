@@ -38,7 +38,7 @@ The backend (`../my-wallet/apps/server`) must be running locally. The emulator r
 
 - UI state is a single immutable data class exposed as `StateFlow` from each ViewModel
 - All network calls return `Result<T>` and are handled with `.fold(onSuccess, onFailure)`
-- Dialogs (create, edit, delete confirmations) are driven by state fields in the ViewModel, not local composable state
+- Simple create/edit/delete confirmations are dialogs driven by state fields in the ViewModel, not local composable state; complex multi-entry forms (e.g. net worth snapshots) use dedicated screens
 - Theme is a three-way `ThemeMode` enum (`SYSTEM`/`LIGHT`/`DARK`) stored in DataStore; `SYSTEM` follows the device setting
 - Profile is a top-level bottom nav destination (not navigated to from HomeScreen)
 - Date strings from the API are ISO-8601 or epoch-ms; use `formatDate()` / `formatDateShort()` from `util/FormatDate.kt`
@@ -51,6 +51,12 @@ The backend (`../my-wallet/apps/server`) must be running locally. The emulator r
 - `isActive=false` means fully inactive (past end date).
 - Resume logic: if `isActive=true` (cancelled but still running), resume immediately with no new start date; if `isActive=false`, show a form asking for a new start date, amount, and billing cycle.
 - Badge colours match the web: Monthly → green (`Green100`/`Green600`), Yearly → blue (`Blue100`/`Blue600`), Cancelled → red (`Red100`/`Red600`). Brand colours are defined in `ui/theme/Color.kt`.
+
+## Net Worth Domain Notes
+
+- Snapshot entries are typed as `"ASSET"` or `"LIABILITY"` (string, matches the GraphQL enum).
+- Predefined category lists (`ASSET_CATEGORIES`, `LIABILITY_CATEGORIES`) and the shared `EntryDraft` data class live in `CreateNetWorthSnapshotViewModel.kt` — `EditNetWorthSnapshotViewModel` imports them from there.
+- Create and Edit snapshot screens are dedicated full screens (not dialogs) because they manage a dynamic list of entries.
 
 ## GraphQL Schema Note
 
