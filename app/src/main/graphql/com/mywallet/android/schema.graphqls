@@ -152,9 +152,11 @@ input UpdateSubscriptionInput {
 type NetWorthSnapshot {
   id: ID!
   title: String!
+  snapshotDate: String!
   totalAssets: Float!
   totalLiabilities: Float!
   netWorth: Float!
+  previousSnapshot: NetWorthSnapshot
   entries: [NetWorthEntry!]!
   createdAt: String!
   updatedAt: String!

@@ -3,9 +3,13 @@ query GetNetWorthSnapshots($page: Int) {
     items {
       id
       title
+      snapshotDate
       totalAssets
       totalLiabilities
       netWorth
+      previousSnapshot {
+        netWorth
+      }
       createdAt
     }
     totalCount
