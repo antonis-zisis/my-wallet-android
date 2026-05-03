@@ -169,21 +169,29 @@ fun CreateNetWorthSnapshotScreen(
 
             // Summary — only visible when at least one amount is entered
             if (hasSomeAmount) {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-                        SummaryRow("Assets", totalAssets, incomeColor())
-                        Spacer(modifier = Modifier.height(4.dp))
-                        SummaryRow("Liabilities", totalLiabilities, MaterialTheme.colorScheme.error)
-                        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                        SummaryRow(
-                            label = "Net Worth",
-                            amount = netWorth,
-                            color = netWorthColor(netWorth >= 0),
-                            fontWeight = FontWeight.Bold,
-                        )
+                    listOf(
+                        Triple("Net Worth", formatMoney(kotlin.math.abs(netWorth)), netWorthColor(netWorth >= 0)),
+                        Triple("Assets", formatMoney(totalAssets), incomeColor()),
+                        Triple("Liabilities", formatMoney(totalLiabilities), MaterialTheme.colorScheme.error),
+                    ).forEach { (label, value, color) ->
+                        Card(
+                            modifier = Modifier.weight(1f),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                        ) {
+                            SummaryCard(
+                                label = label,
+                                value = value,
+                                color = color,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(12.dp),
+                            )
+                        }
                     }
                 }
             }
@@ -264,23 +272,23 @@ fun CreateNetWorthSnapshotScreen(
 }
 
 @Composable
-private fun SummaryRow(
+private fun SummaryCard(
     label: String,
-    amount: Double,
+    value: String,
     color: Color,
-    fontWeight: FontWeight = FontWeight.SemiBold,
+    modifier: Modifier = Modifier,
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(label, style = MaterialTheme.typography.bodyMedium)
+    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
-            formatMoney(kotlin.math.abs(amount)),
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = fontWeight,
+            text = value,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold,
             color = color,
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
