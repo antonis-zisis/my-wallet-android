@@ -23,6 +23,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -37,6 +38,7 @@ import com.antoniszisis.mywallet.ui.components.ErrorMessage
 import com.antoniszisis.mywallet.ui.components.LoadingScreen
 import com.antoniszisis.mywallet.ui.theme.expenseColor
 import com.antoniszisis.mywallet.ui.theme.incomeColor
+import com.antoniszisis.mywallet.ui.theme.netWorthColor
 import com.antoniszisis.mywallet.util.formatDate
 import com.antoniszisis.mywallet.util.formatMoney
 
@@ -53,7 +55,19 @@ fun NetWorthDetailScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(state.snapshot?.title ?: "Net Worth") },
+                title = {
+                    Column {
+                        Text(state.snapshot?.title ?: "Net Worth")
+                        val snapshot = state.snapshot
+                        if (snapshot != null) {
+                            Text(
+                                text = formatDate(snapshot.createdAt),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -67,7 +81,10 @@ fun NetWorthDetailScreen(
                             tint = MaterialTheme.colorScheme.error,
                         )
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                ),
             )
         }
     ) { padding ->
@@ -89,31 +106,31 @@ fun NetWorthDetailScreen(
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    // Summary card
+                    // Summary cards
                     item {
-                        Card(
+                        Row(
                             modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                            ),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
-                            Column(modifier = Modifier.padding(16.dp)) {
-                                Text(
-                                    formatDate(snapshot.createdAt),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                )
-                                Spacer(Modifier.height(8.dp))
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
+                            listOf(
+                                Triple("Net Worth", formatMoney(kotlin.math.abs(snapshot.netWorth)), netWorthColor(snapshot.netWorth >= 0)),
+                                Triple("Assets", formatMoney(snapshot.totalAssets), incomeColor()),
+                                Triple("Liabilities", formatMoney(snapshot.totalLiabilities), expenseColor()),
+                            ).forEach { (label, value, color) ->
+                                Card(
+                                    modifier = Modifier.weight(1f),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.surface,
+                                    ),
+                                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
                                 ) {
-                                    NetWorthStat("Assets", formatMoney(snapshot.totalAssets), incomeColor())
-                                    NetWorthStat("Liabilities", formatMoney(snapshot.totalLiabilities), expenseColor())
                                     NetWorthStat(
-                                        "Net Worth",
-                                        formatMoney(snapshot.netWorth),
-                                        if (snapshot.netWorth >= 0) incomeColor() else expenseColor(),
+                                        label = label,
+                                        value = value,
+                                        color = color,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(12.dp),
                                     )
                                 }
                             }
@@ -213,8 +230,9 @@ private fun NetWorthStat(
     label: String,
     value: String,
     color: androidx.compose.ui.graphics.Color,
+    modifier: Modifier = Modifier,
 ) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
             text = value,
             style = MaterialTheme.typography.titleSmall,
@@ -224,7 +242,7 @@ private fun NetWorthStat(
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onPrimaryContainer,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
