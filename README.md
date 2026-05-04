@@ -159,11 +159,13 @@ Each screen has a ViewModel exposing a single `StateFlow<UiState>` data class. S
 
 ## Launcher Icons
 
-The project ships with a vector wallet icon (`res/drawable/ic_wallet.xml`) as an adaptive icon placeholder. For production:
+Branded PNG launcher icons are already included for all densities (`mipmap-hdpi` through `mipmap-xxxhdpi`). The adaptive icon is composed of:
 
-1. In Android Studio: right-click `res` → **New → Image Asset**
-2. Choose **Launcher Icons (Adaptive and Legacy)**
-3. This generates all `mipmap-*` density variants
+- `ic_launcher_background.png` — background layer
+- `ic_launcher_foreground.png` — foreground layer, wrapped by `drawable/ic_launcher_foreground_padded.xml` (16% inset to respect the safe zone)
+- `ic_launcher.png` — legacy fallback for pre-API 26 (not applicable — `minSdk = 26`)
+
+The splash screen uses `ic_splash.png` (density-specific), referenced via `windowSplashScreenAnimatedIcon` in `res/values/themes.xml`.
 
 ---
 
