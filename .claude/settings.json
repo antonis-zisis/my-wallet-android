@@ -1,0 +1,17 @@
+{
+    "permissions": {
+        "allow": [
+            "Bash(git add:*)",
+            "Bash(git commit:*)",
+            "Bash(git status:*)",
+            "Bash(git diff:*)",
+            "Bash(cat:*)",
+            "Bash(ls:*)",
+            "Edit(/app/**)"
+        ],
+        "deny": [
+            "Read(local.properties)",
+            "Read(my-wallet-release.jks)"
+        ]
+    }
+}
