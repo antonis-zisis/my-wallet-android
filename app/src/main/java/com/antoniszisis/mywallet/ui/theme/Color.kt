@@ -100,6 +100,6 @@ val DarkOutline = Gray600
 // Badge color pairs (background to foreground) — dark mode uses deep containers with lifted text
 @Composable fun monthlyBadgeColors() = if (isSystemInDarkTheme()) Green900 to Green400 else Green100 to Green600
 @Composable fun yearlyBadgeColors() = if (isSystemInDarkTheme()) Indigo800 to Indigo400 else Indigo100 to Indigo600
-@Composable fun cancelledBadgeColors() = if (isSystemInDarkTheme()) Red500 to Color.White else Red600 to Color.White
+@Composable fun cancelledBadgeColors() = if (isSystemInDarkTheme()) Red900 to Red400 else Red100 to Red600
 @Composable fun trialBadgeColors() = if (isSystemInDarkTheme()) Amber900 to Amber300 else Amber100 to Amber700
 @Composable fun trialCountdownColor() = if (isSystemInDarkTheme()) Amber400 else Amber600
