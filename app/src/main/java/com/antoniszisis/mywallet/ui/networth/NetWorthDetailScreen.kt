@@ -57,6 +57,7 @@ import java.util.Locale
 import com.antoniszisis.mywallet.ui.components.ConfirmDialog
 import com.antoniszisis.mywallet.ui.components.ErrorMessage
 import com.antoniszisis.mywallet.ui.components.LoadingScreen
+import com.antoniszisis.mywallet.ui.theme.LocalHideAmounts
 import com.antoniszisis.mywallet.ui.theme.expenseColor
 import com.antoniszisis.mywallet.ui.theme.incomeColor
 import com.antoniszisis.mywallet.ui.theme.netWorthColor
@@ -73,6 +74,7 @@ fun NetWorthDetailScreen(
     onNavigateToEdit: () -> Unit = {},
     viewModel: NetWorthDetailViewModel = hiltViewModel(),
 ) {
+    val hideAmounts = LocalHideAmounts.current
     LaunchedEffect(snapshotId) { viewModel.init(snapshotId) }
     LaunchedEffect(needsRefresh) {
         if (needsRefresh) {
@@ -166,23 +168,23 @@ fun NetWorthDetailScreen(
                         val summaryCards = listOf(
                             SummaryCardData(
                                 label = "Net Worth",
-                                value = formatMoney(kotlin.math.abs(snapshot.netWorth)),
+                                value = if (hideAmounts) "••••" else formatMoney(kotlin.math.abs(snapshot.netWorth)),
                                 color = netWorthColor(snapshot.netWorth >= 0),
-                                diff = prev?.let { buildDiff(snapshot.netWorth, it.netWorth) },
+                                diff = if (hideAmounts) null else prev?.let { buildDiff(snapshot.netWorth, it.netWorth) },
                                 diffColor = prev?.let { if (snapshot.netWorth >= it.netWorth) incomeColor() else MaterialTheme.colorScheme.error },
                             ),
                             SummaryCardData(
                                 label = "Assets",
-                                value = formatMoney(snapshot.totalAssets),
+                                value = if (hideAmounts) "••••" else formatMoney(snapshot.totalAssets),
                                 color = incomeColor(),
-                                diff = prev?.let { buildDiff(snapshot.totalAssets, it.totalAssets) },
+                                diff = if (hideAmounts) null else prev?.let { buildDiff(snapshot.totalAssets, it.totalAssets) },
                                 diffColor = prev?.let { if (snapshot.totalAssets >= it.totalAssets) incomeColor() else MaterialTheme.colorScheme.error },
                             ),
                             SummaryCardData(
                                 label = "Liabilities",
-                                value = formatMoney(snapshot.totalLiabilities),
+                                value = if (hideAmounts) "••••" else formatMoney(snapshot.totalLiabilities),
                                 color = expenseColor(),
-                                diff = prev?.let { buildDiff(snapshot.totalLiabilities, it.totalLiabilities) },
+                                diff = if (hideAmounts) null else prev?.let { buildDiff(snapshot.totalLiabilities, it.totalLiabilities) },
                                 diffColor = prev?.let { if (snapshot.totalLiabilities <= it.totalLiabilities) incomeColor() else MaterialTheme.colorScheme.error },
                             ),
                         )
@@ -220,7 +222,7 @@ fun NetWorthDetailScreen(
                                 ?.filter { it.type == "ASSET" } ?: emptyList()
                             CollapsibleEntriesCard(
                                 title = "Assets",
-                                total = formatMoney(snapshot.totalAssets),
+                                total = if (hideAmounts) "••••" else formatMoney(snapshot.totalAssets),
                                 totalAmount = snapshot.totalAssets,
                                 titleColor = incomeColor(),
                                 entries = assets,
@@ -239,7 +241,7 @@ fun NetWorthDetailScreen(
                                 ?.filter { it.type == "LIABILITY" } ?: emptyList()
                             CollapsibleEntriesCard(
                                 title = "Liabilities",
-                                total = formatMoney(snapshot.totalLiabilities),
+                                total = if (hideAmounts) "••••" else formatMoney(snapshot.totalLiabilities),
                                 totalAmount = snapshot.totalLiabilities,
                                 titleColor = expenseColor(),
                                 entries = liabilities,
@@ -281,6 +283,7 @@ private fun CollapsibleEntriesCard(
     positiveIsGood: Boolean,
     categoryOrder: List<String>,
 ) {
+    val hideAmounts = LocalHideAmounts.current
     var expanded by remember { mutableStateOf(true) }
     val chevronRotation by animateFloatAsState(targetValue = if (expanded) 180f else 0f, label = "chevron")
 
@@ -360,7 +363,7 @@ private fun CollapsibleEntriesCard(
                                         )
                                         Row(verticalAlignment = Alignment.CenterVertically) {
                                             Text(
-                                                formatMoney(entry.amount),
+                                                if (hideAmounts) "••••" else formatMoney(entry.amount),
                                                 style = MaterialTheme.typography.bodyMedium,
                                                 fontWeight = FontWeight.Medium,
                                                 color = entryColor,
@@ -398,6 +401,7 @@ private fun EntryDeltaIcon(
     previous: Double,
     positiveIsGood: Boolean,
 ) {
+    val hideAmounts = LocalHideAmounts.current
     val delta = current - previous
     if (delta == 0.0) return
 
@@ -406,7 +410,7 @@ private fun EntryDeltaIcon(
     val pctDelta = if (previous != 0.0)
         " (${sign}${String.format(Locale.US, "%.1f", kotlin.math.abs(delta / previous * 100))}%)"
     else ""
-    val deltaText = "${sign}${formatMoney(absDelta)}${pctDelta}"
+    val deltaText = if (hideAmounts) "${sign}••••" else "${sign}${formatMoney(absDelta)}${pctDelta}"
     val deltaColor = if ((delta > 0) == positiveIsGood)
         incomeColor() else MaterialTheme.colorScheme.error
 

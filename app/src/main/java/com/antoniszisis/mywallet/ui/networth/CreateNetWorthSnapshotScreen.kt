@@ -55,6 +55,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.antoniszisis.mywallet.ui.theme.LocalHideAmounts
 import com.antoniszisis.mywallet.ui.theme.incomeColor
 import com.antoniszisis.mywallet.ui.theme.netWorthColor
 import com.antoniszisis.mywallet.util.formatMoney
@@ -70,6 +71,7 @@ fun CreateNetWorthSnapshotScreen(
     onSuccess: () -> Unit,
     viewModel: CreateNetWorthSnapshotViewModel = hiltViewModel(),
 ) {
+    val hideAmounts = LocalHideAmounts.current
     val state by viewModel.uiState.collectAsState()
 
     val assetEntries = remember(state.entries) { state.entries.filter { it.type == "ASSET" } }
@@ -174,9 +176,9 @@ fun CreateNetWorthSnapshotScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     listOf(
-                        Triple("Net Worth", formatMoney(kotlin.math.abs(netWorth)), netWorthColor(netWorth >= 0)),
-                        Triple("Assets", formatMoney(totalAssets), incomeColor()),
-                        Triple("Liabilities", formatMoney(totalLiabilities), MaterialTheme.colorScheme.error),
+                        Triple("Net Worth", if (hideAmounts) "••••" else formatMoney(kotlin.math.abs(netWorth)), netWorthColor(netWorth >= 0)),
+                        Triple("Assets", if (hideAmounts) "••••" else formatMoney(totalAssets), incomeColor()),
+                        Triple("Liabilities", if (hideAmounts) "••••" else formatMoney(totalLiabilities), MaterialTheme.colorScheme.error),
                     ).forEach { (label, value, color) ->
                         Card(
                             modifier = Modifier.weight(1f),
@@ -305,6 +307,7 @@ internal fun EntriesSection(
     onUpdateEntry: (String, EntryDraft.() -> EntryDraft) -> Unit,
     onRemoveEntry: (String) -> Unit,
 ) {
+    val hideAmounts = LocalHideAmounts.current
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
@@ -324,7 +327,7 @@ internal fun EntriesSection(
                     )
                     if (total != null) {
                         Text(
-                            formatMoney(total),
+                            if (hideAmounts) "••••" else formatMoney(total),
                             style = MaterialTheme.typography.bodySmall,
                             color = totalColor,
                             fontWeight = FontWeight.Medium,
