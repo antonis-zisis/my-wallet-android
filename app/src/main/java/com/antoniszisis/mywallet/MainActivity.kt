@@ -26,6 +26,7 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -36,6 +37,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.lifecycle.ViewModel
@@ -47,6 +49,7 @@ import androidx.navigation.compose.rememberNavController
 import com.antoniszisis.mywallet.data.repository.AuthRepository
 import com.antoniszisis.mywallet.ui.navigation.AppNavGraph
 import com.antoniszisis.mywallet.ui.navigation.Screen
+import com.antoniszisis.mywallet.ui.theme.LocalHideAmounts
 import com.antoniszisis.mywallet.ui.theme.MyWalletTheme
 import com.antoniszisis.mywallet.ui.theme.ThemeMode
 import dagger.hilt.android.AndroidEntryPoint
@@ -101,18 +104,27 @@ class MainActivity : ComponentActivity() {
                 ThemeMode.DARK -> true
                 ThemeMode.LIGHT -> false
             }
+            val hideAmounts = preferences?.get(HIDE_AMOUNTS_KEY) ?: false
 
             MyWalletTheme(darkTheme = isDarkTheme) {
-                if (authChecked) {
-                    MyWalletApp(
-                        startDestination = startDestination,
-                        themeMode = themeMode,
-                        onThemeModeChange = { mode ->
-                            lifecycleScope.launch {
-                                dataStore.edit { it[THEME_MODE_KEY] = mode.name }
-                            }
-                        },
-                    )
+                CompositionLocalProvider(LocalHideAmounts provides hideAmounts) {
+                    if (authChecked) {
+                        MyWalletApp(
+                            startDestination = startDestination,
+                            themeMode = themeMode,
+                            onThemeModeChange = { mode ->
+                                lifecycleScope.launch {
+                                    dataStore.edit { it[THEME_MODE_KEY] = mode.name }
+                                }
+                            },
+                            hideAmounts = hideAmounts,
+                            onHideAmountsChange = { hide ->
+                                lifecycleScope.launch {
+                                    dataStore.edit { it[HIDE_AMOUNTS_KEY] = hide }
+                                }
+                            },
+                        )
+                    }
                 }
             }
         }
@@ -120,6 +132,7 @@ class MainActivity : ComponentActivity() {
 
     companion object {
         val THEME_MODE_KEY = stringPreferencesKey("theme_mode")
+        val HIDE_AMOUNTS_KEY = booleanPreferencesKey("hide_amounts")
     }
 }
 
@@ -135,6 +148,8 @@ fun MyWalletApp(
     startDestination: String,
     themeMode: ThemeMode,
     onThemeModeChange: (ThemeMode) -> Unit,
+    hideAmounts: Boolean,
+    onHideAmountsChange: (Boolean) -> Unit,
     appViewModel: AppViewModel = hiltViewModel(),
 ) {
     val navController = rememberNavController()
@@ -223,6 +238,8 @@ fun MyWalletApp(
             modifier = Modifier.padding(innerPadding).consumeWindowInsets(innerPadding),
             themeMode = themeMode,
             onThemeModeChange = onThemeModeChange,
+            hideAmounts = hideAmounts,
+            onHideAmountsChange = onHideAmountsChange,
         )
     }
 }

@@ -66,6 +66,7 @@ import com.antoniszisis.mywallet.ui.components.ErrorMessage
 import com.antoniszisis.mywallet.ui.components.LoadingScreen
 import com.antoniszisis.mywallet.ui.components.PaginationControls
 import com.antoniszisis.mywallet.ui.theme.Green500
+import com.antoniszisis.mywallet.ui.theme.LocalHideAmounts
 import com.antoniszisis.mywallet.ui.theme.Red500
 import com.antoniszisis.mywallet.ui.theme.netWorthColor
 import com.antoniszisis.mywallet.util.formatDate
@@ -201,6 +202,7 @@ private fun NetWorthTrendChart(
     snapshots: List<GetNetWorthSnapshotsQuery.Item>,
     modifier: Modifier = Modifier,
 ) {
+    val hideAmounts = LocalHideAmounts.current
     val chartCount = 5
     val chartData = remember(snapshots) { snapshots.take(chartCount).reversed() }
 
@@ -238,9 +240,9 @@ private fun NetWorthTrendChart(
             xLabels.getOrElse(value.toInt()) { "" }
         }
     }
-    val yValueFormatter = remember {
+    val yValueFormatter = remember(hideAmounts) {
         CartesianValueFormatter { value, _, _ ->
-            formatMoneyCompact(value.toDouble())
+            if (hideAmounts) "••••" else formatMoneyCompact(value.toDouble())
         }
     }
 
@@ -360,6 +362,7 @@ private fun SnapshotListItem(
     snapshot: GetNetWorthSnapshotsQuery.Item,
     onClick: () -> Unit,
 ) {
+    val hideAmounts = LocalHideAmounts.current
     val netWorthPositive = snapshot.netWorth >= 0
     val delta = snapshot.previousSnapshot?.netWorth?.let { snapshot.netWorth - it }
 
@@ -390,7 +393,7 @@ private fun SnapshotListItem(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Text(
-                        "${if (netWorthPositive) "+" else "-"}${formatMoney(kotlin.math.abs(snapshot.netWorth))}",
+                        if (hideAmounts) "••••" else "${if (netWorthPositive) "+" else "-"}${formatMoney(kotlin.math.abs(snapshot.netWorth))}",
                         style = MaterialTheme.typography.bodySmall,
                         fontWeight = FontWeight.SemiBold,
                         color = netWorthColor(netWorthPositive),
@@ -426,7 +429,7 @@ private fun SnapshotListItem(
                                 tint = if (deltaPositive) Green500 else Red500,
                             )
                             Text(
-                                "${if (deltaPositive) "+" else "-"}${formatMoney(kotlin.math.abs(delta))}",
+                                if (hideAmounts) "••••" else "${if (deltaPositive) "+" else "-"}${formatMoney(kotlin.math.abs(delta))}",
                                 style = MaterialTheme.typography.bodySmall,
                                 fontWeight = FontWeight.SemiBold,
                                 color = if (deltaPositive) Green500 else Red500,

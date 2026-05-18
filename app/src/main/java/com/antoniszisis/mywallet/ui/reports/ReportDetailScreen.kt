@@ -72,6 +72,7 @@ import com.antoniszisis.mywallet.graphql.GetReportQuery
 import com.antoniszisis.mywallet.ui.components.ConfirmDialog
 import com.antoniszisis.mywallet.ui.components.ErrorMessage
 import com.antoniszisis.mywallet.ui.components.LoadingScreen
+import com.antoniszisis.mywallet.ui.theme.LocalHideAmounts
 import com.antoniszisis.mywallet.ui.theme.expenseColor
 import com.antoniszisis.mywallet.ui.theme.incomeColor
 import com.antoniszisis.mywallet.util.formatDate
@@ -84,6 +85,7 @@ fun ReportDetailScreen(
     onNavigateBack: () -> Unit,
     viewModel: ReportDetailViewModel = hiltViewModel(),
 ) {
+    val hideAmounts = LocalHideAmounts.current
     LaunchedEffect(reportId) { viewModel.init(reportId) }
     val state by viewModel.uiState.collectAsState()
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
@@ -237,9 +239,9 @@ fun ReportDetailScreen(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
                             listOf(
-                                Triple("Income", formatMoney(income), incomeColor()),
-                                Triple("Expenses", formatMoney(expenses), expenseColor()),
-                                Triple("Net Balance", (if (net >= 0) "+" else "") + formatMoney(net), if (net >= 0) incomeColor() else expenseColor()),
+                                Triple("Income", if (hideAmounts) "••••" else formatMoney(income), incomeColor()),
+                                Triple("Expenses", if (hideAmounts) "••••" else formatMoney(expenses), expenseColor()),
+                                Triple("Net Balance", if (hideAmounts) "••••" else (if (net >= 0) "+" else "") + formatMoney(net), if (net >= 0) incomeColor() else expenseColor()),
                             ).forEach { (label, value, color) ->
                                 Card(
                                     modifier = Modifier.weight(1f),
@@ -306,7 +308,7 @@ fun ReportDetailScreen(
                             )
                             if (state.selectedCategory != null && filteredTransactions.isNotEmpty()) {
                                 Text(
-                                    text = (if (filteredNet >= 0) "+" else "-") + formatMoney(Math.abs(filteredNet)),
+                                    text = if (hideAmounts) "••••" else (if (filteredNet >= 0) "+" else "-") + formatMoney(Math.abs(filteredNet)),
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold,
                                     color = if (filteredNet >= 0) incomeColor() else expenseColor(),
@@ -478,6 +480,7 @@ private fun TransactionRow(
     onEdit: () -> Unit,
     onDelete: () -> Unit,
 ) {
+    val hideAmounts = LocalHideAmounts.current
     val isIncome = transaction.type.rawValue == "INCOME"
     var showMenu by remember { mutableStateOf(false) }
 
@@ -501,7 +504,7 @@ private fun TransactionRow(
             )
         }
         Text(
-            text = (if (isIncome) "+" else "-") + formatMoney(transaction.amount),
+            text = if (hideAmounts) "••••" else (if (isIncome) "+" else "-") + formatMoney(transaction.amount),
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Bold,
             color = if (isIncome) incomeColor() else expenseColor(),

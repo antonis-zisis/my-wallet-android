@@ -26,6 +26,8 @@ fun AppNavGraph(
     modifier: androidx.compose.ui.Modifier = androidx.compose.ui.Modifier,
     themeMode: ThemeMode = ThemeMode.SYSTEM,
     onThemeModeChange: (ThemeMode) -> Unit = {},
+    hideAmounts: Boolean = false,
+    onHideAmountsChange: (Boolean) -> Unit = {},
 ) {
     NavHost(
         navController = navController,
@@ -59,6 +61,7 @@ fun AppNavGraph(
                 onNavigateToReports = {
                     navController.navigate(Screen.Reports.route)
                 },
+                onHideAmountsChange = onHideAmountsChange,
             )
         }
 
@@ -161,6 +164,8 @@ fun AppNavGraph(
                 },
                 themeMode = themeMode,
                 onThemeModeChange = onThemeModeChange,
+                hideAmounts = hideAmounts,
+                onHideAmountsChange = onHideAmountsChange,
             )
         }
     }

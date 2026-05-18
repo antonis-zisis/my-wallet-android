@@ -27,6 +27,8 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Subscriptions
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -65,6 +67,7 @@ import kotlinx.coroutines.launch
 import com.antoniszisis.mywallet.graphql.GetReportsSummaryQuery
 import com.antoniszisis.mywallet.ui.components.LoadingScreen
 import com.antoniszisis.mywallet.ui.components.SectionCard
+import com.antoniszisis.mywallet.ui.theme.LocalHideAmounts
 import com.antoniszisis.mywallet.ui.theme.expenseColor
 import com.antoniszisis.mywallet.ui.theme.incomeColor
 import com.antoniszisis.mywallet.ui.theme.netWorthColor
@@ -81,16 +84,26 @@ fun HomeScreen(
     onNavigateToSubscriptions: () -> Unit,
     onNavigateToNetWorth: () -> Unit,
     onNavigateToReports: () -> Unit,
+    onHideAmountsChange: (Boolean) -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
+    val hideAmounts = LocalHideAmounts.current
 
     Column(modifier = Modifier.fillMaxSize()) {
         TopAppBar(
             title = { Text("Overview") },
             colors = TopAppBarDefaults.topAppBarColors(
                 containerColor = MaterialTheme.colorScheme.background,
-            )
+            ),
+            actions = {
+                IconButton(onClick = { onHideAmountsChange(!hideAmounts) }) {
+                    Icon(
+                        imageVector = if (hideAmounts) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                        contentDescription = if (hideAmounts) "Show amounts" else "Hide amounts",
+                    )
+                }
+            },
         )
 
         if (state.isLoading) {
@@ -223,7 +236,7 @@ fun HomeScreen(
                     val currentIncome = state.reportsSummary?.items?.firstOrNull()
                         ?.transactions?.filter { it.type.rawValue == "INCOME" }
                         ?.sumOf { it.amount } ?: 0.0
-                    val percentOfIncome = if (currentIncome > 0) {
+                    val percentOfIncome = if (hideAmounts) "••••" else if (currentIncome > 0) {
                         "${"%.1f".format((totalMonthly / currentIncome) * 100)}%"
                     } else "-"
                     Row(
@@ -232,12 +245,12 @@ fun HomeScreen(
                     ) {
                         SubscriptionStatCard(
                             label = "Monthly Cost",
-                            value = formatMoney(totalMonthly),
+                            value = if (hideAmounts) "••••" else formatMoney(totalMonthly),
                             modifier = Modifier.weight(1f),
                         )
                         SubscriptionStatCard(
                             label = "Yearly Cost",
-                            value = formatMoney(totalMonthly * 12),
+                            value = if (hideAmounts) "••••" else formatMoney(totalMonthly * 12),
                             modifier = Modifier.weight(1f),
                         )
                         SubscriptionStatCard(
@@ -338,7 +351,7 @@ fun HomeScreen(
                                                 }
                                             }
                                             Text(
-                                                formatMoney(sub.amount),
+                                                if (hideAmounts) "••••" else formatMoney(sub.amount),
                                                 style = MaterialTheme.typography.bodyMedium,
                                                 fontWeight = FontWeight.SemiBold,
                                             )
@@ -532,6 +545,7 @@ private fun ReportSummaryRow(
 ) {
     val income = report.transactions.filter { it.type.rawValue == "INCOME" }.sumOf { it.amount }
     val expenses = report.transactions.filter { it.type.rawValue == "EXPENSE" }.sumOf { it.amount }
+    val hideAmounts = LocalHideAmounts.current
 
     Card(
         modifier = Modifier
@@ -576,7 +590,7 @@ private fun ReportSummaryRow(
                     )
                 }
                 Text(
-                    text = formatMoney(income),
+                    text = if (hideAmounts) "••••" else formatMoney(income),
                     style = MaterialTheme.typography.bodySmall,
                     color = incomeColor(),
                 )
@@ -602,7 +616,7 @@ private fun ReportSummaryRow(
                     )
                 }
                 Text(
-                    text = formatMoney(expenses),
+                    text = if (hideAmounts) "••••" else formatMoney(expenses),
                     style = MaterialTheme.typography.bodySmall,
                     color = expenseColor(),
                 )
@@ -805,6 +819,7 @@ private fun NetWorthContent(
     recentSnapshots: List<com.antoniszisis.mywallet.graphql.GetNetWorthSnapshotsQuery.Item>,
     onNavigateToDetail: () -> Unit,
 ) {
+    val hideAmounts = LocalHideAmounts.current
     val isPositive = snapshot.netWorth >= 0
     val delta = previousSnapshot?.let { snapshot.netWorth - it.netWorth }
     val deltaIsPositive = delta != null && delta >= 0
@@ -843,7 +858,7 @@ private fun NetWorthContent(
         // Big net worth value
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(
-                text = formatMoney(snapshot.netWorth),
+                text = if (hideAmounts) "••••" else formatMoney(snapshot.netWorth),
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
                 color = netWorthColor(isPositive),
@@ -860,7 +875,7 @@ private fun NetWorthContent(
                         modifier = Modifier.size(14.dp),
                     )
                     Text(
-                        text = "${if (deltaIsPositive) "+" else "-"}${formatMoney(kotlin.math.abs(delta))} since ${previousSnapshot.title}",
+                        text = if (hideAmounts) "•••• since ${previousSnapshot.title}" else "${if (deltaIsPositive) "+" else "-"}${formatMoney(kotlin.math.abs(delta))} since ${previousSnapshot.title}",
                         style = MaterialTheme.typography.bodySmall,
                         fontWeight = FontWeight.Medium,
                         color = deltaColor,

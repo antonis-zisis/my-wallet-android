@@ -42,6 +42,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.antoniszisis.mywallet.graphql.GetReportQuery
 import com.antoniszisis.mywallet.ui.theme.CategoryColors
+import com.antoniszisis.mywallet.ui.theme.LocalHideAmounts
 import com.antoniszisis.mywallet.util.formatMoney
 import kotlin.math.PI
 import kotlin.math.atan2
@@ -159,6 +160,7 @@ internal fun DonutChart(
     segments: List<ChartSegment>,
     modifier: Modifier = Modifier,
 ) {
+    val hideAmounts = LocalHideAmounts.current
     var selectedIndex by remember { mutableStateOf<Int?>(null) }
 
     Box(modifier = modifier) {
@@ -242,7 +244,7 @@ internal fun DonutChart(
                     fontWeight = FontWeight.Medium,
                 )
                 Text(
-                    text = formatMoney(sel.amount),
+                    text = if (hideAmounts) "••••" else formatMoney(sel.amount),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                 )
@@ -261,6 +263,7 @@ internal fun BreakdownLegend(
     segments: List<ChartSegment>,
     modifier: Modifier = Modifier,
 ) {
+    val hideAmounts = LocalHideAmounts.current
     val rows = segments.chunked(2)
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         for (row in rows) {
@@ -286,7 +289,7 @@ internal fun BreakdownLegend(
                                 fontWeight = FontWeight.Medium,
                             )
                             Text(
-                                text = formatMoney(seg.amount),
+                                text = if (hideAmounts) "••••" else formatMoney(seg.amount),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )

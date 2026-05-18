@@ -80,6 +80,7 @@ import com.antoniszisis.mywallet.ui.components.ConfirmDialog
 import com.antoniszisis.mywallet.ui.components.EmptyState
 import com.antoniszisis.mywallet.ui.components.ErrorMessage
 import com.antoniszisis.mywallet.ui.components.LoadingScreen
+import com.antoniszisis.mywallet.ui.theme.LocalHideAmounts
 import com.antoniszisis.mywallet.ui.theme.cancelledBadgeColors
 import com.antoniszisis.mywallet.ui.theme.trialBadgeColors
 import com.antoniszisis.mywallet.ui.theme.trialCountdownColor
@@ -97,6 +98,7 @@ import kotlinx.coroutines.launch
 fun SubscriptionsScreen(
     viewModel: SubscriptionsViewModel = hiltViewModel(),
 ) {
+    val hideAmounts = LocalHideAmounts.current
     val state by viewModel.uiState.collectAsState()
 
     Scaffold(
@@ -175,8 +177,8 @@ fun SubscriptionsScreen(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                             ) {
                                 listOf(
-                                    "Monthly cost" to formatMoney(totalMonthly),
-                                    "Yearly cost" to formatMoney(totalYearly),
+                                    "Monthly cost" to if (hideAmounts) "••••" else formatMoney(totalMonthly),
+                                    "Yearly cost" to if (hideAmounts) "••••" else formatMoney(totalYearly),
                                 ).forEach { (label, value) ->
                                     Card(modifier = Modifier.weight(1f), colors = cardColors, elevation = cardElevation) {
                                         Column(
@@ -205,7 +207,7 @@ fun SubscriptionsScreen(
                                         horizontalAlignment = Alignment.CenterHorizontally,
                                     ) {
                                         Text(
-                                            text = formatMoney(renewingThisMonthTotal),
+                                            text = if (hideAmounts) "••••" else formatMoney(renewingThisMonthTotal),
                                             style = MaterialTheme.typography.titleSmall,
                                             fontWeight = FontWeight.Bold,
                                             maxLines = 1,
@@ -255,7 +257,7 @@ fun SubscriptionsScreen(
                                             val (sub, date) = nextRenewalEntry
                                             // Line 1: name · price
                                             Text(
-                                                text = "${sub.name} · ${formatMoney(sub.amount)}",
+                                                text = "${sub.name} · ${if (hideAmounts) "••••" else formatMoney(sub.amount)}",
                                                 style = MaterialTheme.typography.titleSmall,
                                                 fontWeight = FontWeight.Bold,
                                                 maxLines = 1,
@@ -304,7 +306,7 @@ fun SubscriptionsScreen(
                                         ) {
                                             Text(
                                                 text = if (mostExpensive != null)
-                                                    "Most expensive · ${formatMoney(mostExpensive.monthlyCost)}/mo"
+                                                    "Most expensive · ${if (hideAmounts) "••••" else formatMoney(mostExpensive.monthlyCost)}/mo"
                                                 else
                                                     "Most expensive",
                                                 style = MaterialTheme.typography.labelSmall,
@@ -317,7 +319,7 @@ fun SubscriptionsScreen(
                                                     positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
                                                     tooltip = {
                                                         PlainTooltip {
-                                                            Text("Yearly cost: ${formatMoney(mostExpensive.monthlyCost * 12)}")
+                                                            Text("Yearly cost: ${if (hideAmounts) "••••" else formatMoney(mostExpensive.monthlyCost * 12)}")
                                                         }
                                                     },
                                                     state = mostExpensiveTooltipState,
@@ -474,6 +476,7 @@ private fun SubscriptionCard(
     onResume: (() -> Unit)?,
     onDelete: () -> Unit,
 ) {
+    val hideAmounts = LocalHideAmounts.current
     var showMenu by remember { mutableStateOf(false) }
     val nextRenewal = getNextRenewalDate(sub.startDate, sub.billingCycle)
 
@@ -500,12 +503,12 @@ private fun SubscriptionCard(
                 val cycleLabel = if (sub.billingCycle == "MONTHLY") "Monthly" else "Yearly"
                 val cycleBg = MaterialTheme.colorScheme.surfaceVariant
                 val cycleFg = MaterialTheme.colorScheme.onSurfaceVariant
-                val altCost = if (sub.billingCycle == "MONTHLY") {
+                val altCost = if (hideAmounts) "••••" else if (sub.billingCycle == "MONTHLY") {
                     "(${formatMoney(sub.amount * 12)}/yr)"
                 } else {
                     "(${formatMoney(sub.monthlyCost)}/mo)"
                 }
-                val amountText = "${formatMoney(sub.amount)} $altCost"
+                val amountText = "${if (hideAmounts) "••••" else formatMoney(sub.amount)} $altCost"
 
                 val (dateText, isAmberSubtitle) = when {
                     isCancelled && sub.endDate != null -> {
