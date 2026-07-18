@@ -8,6 +8,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.antoniszisis.mywallet.ui.auth.LoginScreen
+import com.antoniszisis.mywallet.ui.contracts.ContractsScreen
 import com.antoniszisis.mywallet.ui.home.HomeScreen
 import com.antoniszisis.mywallet.ui.networth.CreateNetWorthSnapshotScreen
 import com.antoniszisis.mywallet.ui.networth.EditNetWorthSnapshotScreen
@@ -55,6 +56,9 @@ fun AppNavGraph(
                 onNavigateToSubscriptions = {
                     navController.navigate(Screen.Subscriptions.route)
                 },
+                onNavigateToContracts = {
+                    navController.navigate(Screen.Contracts.route)
+                },
                 onNavigateToNetWorth = {
                     navController.navigate(Screen.NetWorth.route)
                 },
@@ -86,6 +90,10 @@ fun AppNavGraph(
 
         composable(Screen.Subscriptions.route) {
             SubscriptionsScreen()
+        }
+
+        composable(Screen.Contracts.route) {
+            ContractsScreen()
         }
 
         composable(Screen.NetWorth.route) { backStackEntry ->

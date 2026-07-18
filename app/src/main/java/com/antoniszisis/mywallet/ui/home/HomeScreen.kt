@@ -19,6 +19,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Assignment
 import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
@@ -74,6 +75,7 @@ import com.antoniszisis.mywallet.ui.theme.netWorthColor
 import com.antoniszisis.mywallet.util.formatDate
 import com.antoniszisis.mywallet.util.formatMoney
 import com.antoniszisis.mywallet.util.formatReportTitle
+import com.antoniszisis.mywallet.util.getDaysUntil
 import com.antoniszisis.mywallet.util.getNextRenewalDate
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -82,6 +84,7 @@ fun HomeScreen(
     onNavigateToReportDetail: (String) -> Unit,
     onNavigateToNetWorthDetail: (String) -> Unit,
     onNavigateToSubscriptions: () -> Unit,
+    onNavigateToContracts: () -> Unit,
     onNavigateToNetWorth: () -> Unit,
     onNavigateToReports: () -> Unit,
     onHideAmountsChange: (Boolean) -> Unit = {},
@@ -163,11 +166,18 @@ fun HomeScreen(
                     SectionCard(
                         title = "Monthly Summary",
                         showContentGap = chartExpanded,
+                        compactTopPadding = true,
                         trailing = {
-                            IconButton(onClick = { chartExpanded = !chartExpanded }) {
+                            Box(
+                                modifier = Modifier
+                                    .size(30.dp)
+                                    .clickable { chartExpanded = !chartExpanded },
+                                contentAlignment = Alignment.Center,
+                            ) {
                                 Icon(
                                     imageVector = if (chartExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
                                     contentDescription = if (chartExpanded) "Collapse" else "Expand",
+                                    modifier = Modifier.size(20.dp),
                                 )
                             }
                         },
@@ -277,6 +287,7 @@ fun HomeScreen(
                     SectionCard(
                         title = "Upcoming Renewals",
                         showContentGap = renewalsExpanded,
+                        compactTopPadding = true,
                         titleTrailing = {
                             val infoTooltipState = rememberTooltipState()
                             val infoScope = rememberCoroutineScope()
@@ -296,10 +307,16 @@ fun HomeScreen(
                             }
                         },
                         trailing = {
-                            IconButton(onClick = { renewalsExpanded = !renewalsExpanded }) {
+                            Box(
+                                modifier = Modifier
+                                    .size(30.dp)
+                                    .clickable { renewalsExpanded = !renewalsExpanded },
+                                contentAlignment = Alignment.Center,
+                            ) {
                                 Icon(
                                     imageVector = if (renewalsExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
                                     contentDescription = if (renewalsExpanded) "Collapse" else "Expand",
+                                    modifier = Modifier.size(20.dp),
                                 )
                             }
                         },
@@ -370,6 +387,117 @@ fun HomeScreen(
                     )
                 }
 
+                // Contracts expiring soon
+                Row(
+                    modifier = Modifier.padding(top = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.Assignment,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        text = "Contracts",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                if (state.expiringContracts.isEmpty()) {
+                    SectionEmptyState(
+                        message = "No contracts expiring soon",
+                        actionText = "Manage contracts",
+                        onAction = onNavigateToContracts,
+                    )
+                } else {
+                    var contractsExpanded by remember { mutableStateOf(true) }
+                    val visibleContracts = state.expiringContracts.take(3)
+                    val overflowCount = state.expiringContracts.size - visibleContracts.size
+
+                    SectionCard(
+                        title = "Expiring Soon",
+                        showContentGap = contractsExpanded,
+                        compactTopPadding = true,
+                        trailing = {
+                            Box(
+                                modifier = Modifier
+                                    .size(30.dp)
+                                    .clickable { contractsExpanded = !contractsExpanded },
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    imageVector = if (contractsExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                                    contentDescription = if (contractsExpanded) "Collapse" else "Expand",
+                                    modifier = Modifier.size(20.dp),
+                                )
+                            }
+                        },
+                    ) {
+                        AnimatedVisibility(visible = contractsExpanded) {
+                            Column {
+                                visibleContracts.forEachIndexed { index, contract ->
+                                    if (index > 0) HorizontalDivider(modifier = Modifier.padding(vertical = 2.dp))
+                                    val daysUntil = contract.endDate?.let { getDaysUntil(it) } ?: 0
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable { onNavigateToContracts() }
+                                            .padding(vertical = 6.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically,
+                                    ) {
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                contract.provider,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                fontWeight = FontWeight.Medium,
+                                            )
+                                            Row(
+                                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                            ) {
+                                                Text(contract.category, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                                Text("·", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                                val urgencyColor = when {
+                                                    daysUntil <= 3 -> MaterialTheme.colorScheme.error
+                                                    daysUntil <= 7 -> Color(0xFFF59E0B)
+                                                    else -> MaterialTheme.colorScheme.onSurfaceVariant
+                                                }
+                                                val urgencyLabel = when (daysUntil) {
+                                                    0 -> "expires today"
+                                                    1 -> "expires tomorrow"
+                                                    else -> "expires in ${daysUntil}d"
+                                                }
+                                                Text(urgencyLabel, style = MaterialTheme.typography.bodySmall, color = urgencyColor, fontWeight = FontWeight.Medium)
+                                            }
+                                        }
+                                        if (contract.cost != null) {
+                                            Text(
+                                                if (hideAmounts) "••••" else formatMoney(contract.cost),
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                fontWeight = FontWeight.SemiBold,
+                                            )
+                                        }
+                                    }
+                                }
+                                if (overflowCount > 0) {
+                                    Text(
+                                        text = "+$overflowCount more",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier
+                                            .padding(top = 4.dp)
+                                            .clickable { onNavigateToContracts() },
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
                 // Net worth section
                 Row(
                     modifier = Modifier.padding(top = 16.dp),
@@ -401,11 +529,18 @@ fun HomeScreen(
                     SectionCard(
                         title = "Net Worth",
                         showContentGap = netWorthExpanded,
+                        compactTopPadding = true,
                         trailing = {
-                            IconButton(onClick = { netWorthExpanded = !netWorthExpanded }) {
+                            Box(
+                                modifier = Modifier
+                                    .size(30.dp)
+                                    .clickable { netWorthExpanded = !netWorthExpanded },
+                                contentAlignment = Alignment.Center,
+                            ) {
                                 Icon(
                                     imageVector = if (netWorthExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
                                     contentDescription = if (netWorthExpanded) "Collapse" else "Expand",
+                                    modifier = Modifier.size(20.dp),
                                 )
                             }
                         },
@@ -586,7 +721,6 @@ private fun ReportSummaryRow(
                     Text(
                         text = "Income",
                         style = MaterialTheme.typography.bodySmall,
-                        color = incomeColor(),
                     )
                 }
                 Text(
@@ -612,7 +746,6 @@ private fun ReportSummaryRow(
                     Text(
                         text = "Expenses",
                         style = MaterialTheme.typography.bodySmall,
-                        color = expenseColor(),
                     )
                 }
                 Text(
