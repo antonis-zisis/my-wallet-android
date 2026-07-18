@@ -1,0 +1,51 @@
+query GetContracts($page: Int, $expired: Boolean) {
+  contracts(page: $page, expired: $expired) {
+    items {
+      id
+      category
+      provider
+      plan
+      startDate
+      endDate
+      cost
+      isExpired
+      createdAt
+      updatedAt
+    }
+    totalCount
+  }
+}
+
+mutation CreateContract($input: CreateContractInput!) {
+  createContract(input: $input) {
+    id
+    category
+    provider
+    plan
+    startDate
+    endDate
+    cost
+    isExpired
+    createdAt
+    updatedAt
+  }
+}
+
+mutation UpdateContract($input: UpdateContractInput!) {
+  updateContract(input: $input) {
+    id
+    category
+    provider
+    plan
+    startDate
+    endDate
+    cost
+    isExpired
+    createdAt
+    updatedAt
+  }
+}
+
+mutation DeleteContract($id: ID!) {
+  deleteContract(id: $id)
+}

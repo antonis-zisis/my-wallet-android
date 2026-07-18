@@ -19,6 +19,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Assignment
 import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
@@ -74,6 +75,7 @@ import com.antoniszisis.mywallet.ui.theme.netWorthColor
 import com.antoniszisis.mywallet.util.formatDate
 import com.antoniszisis.mywallet.util.formatMoney
 import com.antoniszisis.mywallet.util.formatReportTitle
+import com.antoniszisis.mywallet.util.getDaysUntil
 import com.antoniszisis.mywallet.util.getNextRenewalDate
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -82,6 +84,7 @@ fun HomeScreen(
     onNavigateToReportDetail: (String) -> Unit,
     onNavigateToNetWorthDetail: (String) -> Unit,
     onNavigateToSubscriptions: () -> Unit,
+    onNavigateToContracts: () -> Unit,
     onNavigateToNetWorth: () -> Unit,
     onNavigateToReports: () -> Unit,
     onHideAmountsChange: (Boolean) -> Unit = {},
@@ -368,6 +371,110 @@ fun HomeScreen(
                         actionText = "Add a subscription",
                         onAction = onNavigateToSubscriptions,
                     )
+                }
+
+                // Contracts expiring soon
+                Row(
+                    modifier = Modifier.padding(top = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.Assignment,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        text = "Contracts",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                if (state.expiringContracts.isEmpty()) {
+                    SectionEmptyState(
+                        message = "No contracts expiring soon",
+                        actionText = "Manage contracts",
+                        onAction = onNavigateToContracts,
+                    )
+                } else {
+                    var contractsExpanded by remember { mutableStateOf(true) }
+                    val visibleContracts = state.expiringContracts.take(3)
+                    val overflowCount = state.expiringContracts.size - visibleContracts.size
+
+                    SectionCard(
+                        title = "Expiring Soon",
+                        showContentGap = contractsExpanded,
+                        trailing = {
+                            IconButton(onClick = { contractsExpanded = !contractsExpanded }) {
+                                Icon(
+                                    imageVector = if (contractsExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                                    contentDescription = if (contractsExpanded) "Collapse" else "Expand",
+                                )
+                            }
+                        },
+                    ) {
+                        AnimatedVisibility(visible = contractsExpanded) {
+                            Column {
+                                visibleContracts.forEachIndexed { index, contract ->
+                                    if (index > 0) HorizontalDivider(modifier = Modifier.padding(vertical = 2.dp))
+                                    val daysUntil = contract.endDate?.let { getDaysUntil(it) } ?: 0
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable { onNavigateToContracts() }
+                                            .padding(vertical = 6.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically,
+                                    ) {
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                contract.provider,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                fontWeight = FontWeight.Medium,
+                                            )
+                                            Row(
+                                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                            ) {
+                                                Text(contract.category, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                                Text("·", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                                val urgencyColor = when {
+                                                    daysUntil <= 3 -> MaterialTheme.colorScheme.error
+                                                    daysUntil <= 7 -> Color(0xFFF59E0B)
+                                                    else -> MaterialTheme.colorScheme.onSurfaceVariant
+                                                }
+                                                val urgencyLabel = when (daysUntil) {
+                                                    0 -> "expires today"
+                                                    1 -> "expires tomorrow"
+                                                    else -> "expires in ${daysUntil}d"
+                                                }
+                                                Text(urgencyLabel, style = MaterialTheme.typography.bodySmall, color = urgencyColor, fontWeight = FontWeight.Medium)
+                                            }
+                                        }
+                                        if (contract.cost != null) {
+                                            Text(
+                                                if (hideAmounts) "••••" else formatMoney(contract.cost),
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                fontWeight = FontWeight.SemiBold,
+                                            )
+                                        }
+                                    }
+                                }
+                                if (overflowCount > 0) {
+                                    Text(
+                                        text = "+$overflowCount more",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier
+                                            .padding(top = 4.dp)
+                                            .clickable { onNavigateToContracts() },
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
 
                 // Net worth section

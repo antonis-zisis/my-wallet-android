@@ -5,22 +5,29 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Assignment
+import androidx.compose.material.icons.automirrored.outlined.Assignment
 import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.Subscriptions
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.outlined.AccountBalance
 import androidx.compose.material.icons.outlined.Subscriptions
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.MoreHoriz
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
@@ -31,6 +38,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -64,6 +72,15 @@ data class BottomNavItem(
     val label: String,
     val selectedIcon: ImageVector,
     val unselectedIcon: ImageVector,
+)
+
+/** Sentinel route for the "More" bottom nav item — it opens [ModalBottomSheet] instead of navigating. */
+const val MORE_ROUTE = "more"
+
+data class MoreMenuItem(
+    val route: String,
+    val label: String,
+    val icon: ImageVector,
 )
 
 @AndroidEntryPoint
@@ -143,6 +160,7 @@ class AppViewModel @Inject constructor(
     val sessionExpired: SharedFlow<Unit> = authRepository.sessionExpired
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MyWalletApp(
     startDestination: String,
@@ -163,6 +181,21 @@ fun MyWalletApp(
     }
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
+    var showMoreSheet by remember { mutableStateOf(false) }
+
+    val moreMenuItems = listOf(
+        MoreMenuItem(
+            route = Screen.NetWorth.route,
+            label = "Net Worth",
+            icon = Icons.Filled.AccountBalance,
+        ),
+        MoreMenuItem(
+            route = Screen.Profile.route,
+            label = "Profile",
+            icon = Icons.Filled.Person,
+        ),
+    )
+    val overflowRoutes = moreMenuItems.map { it.route }
 
     val bottomNavItems = listOf(
         BottomNavItem(
@@ -184,20 +217,21 @@ fun MyWalletApp(
             unselectedIcon = Icons.Outlined.Subscriptions,
         ),
         BottomNavItem(
-            route = Screen.NetWorth.route,
-            label = "Net Worth",
-            selectedIcon = Icons.Filled.AccountBalance,
-            unselectedIcon = Icons.Outlined.AccountBalance,
+            route = Screen.Contracts.route,
+            label = "Contracts",
+            selectedIcon = Icons.AutoMirrored.Filled.Assignment,
+            unselectedIcon = Icons.AutoMirrored.Outlined.Assignment,
         ),
         BottomNavItem(
-            route = Screen.Profile.route,
-            label = "Profile",
-            selectedIcon = Icons.Filled.Person,
-            unselectedIcon = Icons.Outlined.Person,
+            route = MORE_ROUTE,
+            label = "More",
+            selectedIcon = Icons.Filled.MoreHoriz,
+            unselectedIcon = Icons.Outlined.MoreHoriz,
         ),
     )
 
-    val showBottomBar = currentDestination?.route in bottomNavItems.map { it.route }
+    val showBottomBar = currentDestination?.route in
+        (bottomNavItems.map { it.route } - MORE_ROUTE + overflowRoutes)
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -205,18 +239,24 @@ fun MyWalletApp(
             if (showBottomBar) {
                 NavigationBar {
                     bottomNavItems.forEach { item ->
-                        val selected = currentDestination?.hierarchy?.any {
-                            it.route == item.route
-                        } == true
+                        val selected = if (item.route == MORE_ROUTE) {
+                            currentDestination?.route in overflowRoutes
+                        } else {
+                            currentDestination?.hierarchy?.any { it.route == item.route } == true
+                        }
                         NavigationBarItem(
                             selected = selected,
                             onClick = {
-                                navController.navigate(item.route) {
-                                    popUpTo(navController.graph.findStartDestination().id) {
-                                        saveState = true
+                                if (item.route == MORE_ROUTE) {
+                                    showMoreSheet = true
+                                } else {
+                                    navController.navigate(item.route) {
+                                        popUpTo(navController.graph.findStartDestination().id) {
+                                            saveState = true
+                                        }
+                                        launchSingleTop = true
+                                        restoreState = true
                                     }
-                                    launchSingleTop = true
-                                    restoreState = true
                                 }
                             },
                             icon = {
@@ -241,5 +281,26 @@ fun MyWalletApp(
             hideAmounts = hideAmounts,
             onHideAmountsChange = onHideAmountsChange,
         )
+    }
+
+    if (showMoreSheet) {
+        ModalBottomSheet(onDismissRequest = { showMoreSheet = false }) {
+            moreMenuItems.forEach { item ->
+                ListItem(
+                    headlineContent = { Text(item.label) },
+                    leadingContent = { Icon(item.icon, contentDescription = null) },
+                    modifier = Modifier.clickable {
+                        showMoreSheet = false
+                        navController.navigate(item.route) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                )
+            }
+        }
     }
 }

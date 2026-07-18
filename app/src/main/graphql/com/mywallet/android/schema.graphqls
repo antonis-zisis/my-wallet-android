@@ -12,6 +12,7 @@ type Query {
   subscriptions(page: Int, active: Boolean): SubscriptionsResult!
   netWorthSnapshots(page: Int): NetWorthSnapshotsResult!
   netWorthSnapshot(id: ID!): NetWorthSnapshot
+  contracts(page: Int, expired: Boolean): ContractsResult!
   me: User!
 }
 
@@ -32,6 +33,9 @@ type Mutation {
   createNetWorthSnapshot(input: CreateNetWorthSnapshotInput!): NetWorthSnapshot!
   updateNetWorthSnapshot(id: ID!, input: UpdateNetWorthSnapshotInput!): NetWorthSnapshot!
   deleteNetWorthSnapshot(id: ID!): Boolean!
+  createContract(input: CreateContractInput!): Contract!
+  updateContract(input: UpdateContractInput!): Contract!
+  deleteContract(id: ID!): Boolean!
   updateMe(input: UpdateUserInput!): User!
 }
 
@@ -199,4 +203,41 @@ input UpdateNetWorthSnapshotInput {
 
 input UpdateUserInput {
   fullName: String
+}
+
+type Contract {
+  id: ID!
+  category: String!
+  provider: String!
+  plan: String
+  startDate: String
+  endDate: String
+  cost: Float
+  isExpired: Boolean!
+  createdAt: String!
+  updatedAt: String!
+}
+
+type ContractsResult {
+  items: [Contract!]!
+  totalCount: Int!
+}
+
+input CreateContractInput {
+  category: String!
+  provider: String!
+  plan: String
+  startDate: String
+  endDate: String
+  cost: Float
+}
+
+input UpdateContractInput {
+  id: ID!
+  category: String!
+  provider: String!
+  plan: String
+  startDate: String
+  endDate: String
+  cost: Float
 }
