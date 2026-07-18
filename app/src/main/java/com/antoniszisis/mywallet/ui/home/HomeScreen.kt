@@ -693,7 +693,6 @@ private fun ReportSummaryRow(
                     Text(
                         text = "Income",
                         style = MaterialTheme.typography.bodySmall,
-                        color = incomeColor(),
                     )
                 }
                 Text(
@@ -719,7 +718,6 @@ private fun ReportSummaryRow(
                     Text(
                         text = "Expenses",
                         style = MaterialTheme.typography.bodySmall,
-                        color = expenseColor(),
                     )
                 }
                 Text(
