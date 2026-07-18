@@ -166,11 +166,18 @@ fun HomeScreen(
                     SectionCard(
                         title = "Monthly Summary",
                         showContentGap = chartExpanded,
+                        compactTopPadding = true,
                         trailing = {
-                            IconButton(onClick = { chartExpanded = !chartExpanded }) {
+                            Box(
+                                modifier = Modifier
+                                    .size(30.dp)
+                                    .clickable { chartExpanded = !chartExpanded },
+                                contentAlignment = Alignment.Center,
+                            ) {
                                 Icon(
                                     imageVector = if (chartExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
                                     contentDescription = if (chartExpanded) "Collapse" else "Expand",
+                                    modifier = Modifier.size(20.dp),
                                 )
                             }
                         },
@@ -280,6 +287,7 @@ fun HomeScreen(
                     SectionCard(
                         title = "Upcoming Renewals",
                         showContentGap = renewalsExpanded,
+                        compactTopPadding = true,
                         titleTrailing = {
                             val infoTooltipState = rememberTooltipState()
                             val infoScope = rememberCoroutineScope()
@@ -299,10 +307,16 @@ fun HomeScreen(
                             }
                         },
                         trailing = {
-                            IconButton(onClick = { renewalsExpanded = !renewalsExpanded }) {
+                            Box(
+                                modifier = Modifier
+                                    .size(30.dp)
+                                    .clickable { renewalsExpanded = !renewalsExpanded },
+                                contentAlignment = Alignment.Center,
+                            ) {
                                 Icon(
                                     imageVector = if (renewalsExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
                                     contentDescription = if (renewalsExpanded) "Collapse" else "Expand",
+                                    modifier = Modifier.size(20.dp),
                                 )
                             }
                         },
@@ -405,11 +419,18 @@ fun HomeScreen(
                     SectionCard(
                         title = "Expiring Soon",
                         showContentGap = contractsExpanded,
+                        compactTopPadding = true,
                         trailing = {
-                            IconButton(onClick = { contractsExpanded = !contractsExpanded }) {
+                            Box(
+                                modifier = Modifier
+                                    .size(30.dp)
+                                    .clickable { contractsExpanded = !contractsExpanded },
+                                contentAlignment = Alignment.Center,
+                            ) {
                                 Icon(
                                     imageVector = if (contractsExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
                                     contentDescription = if (contractsExpanded) "Collapse" else "Expand",
+                                    modifier = Modifier.size(20.dp),
                                 )
                             }
                         },
@@ -508,11 +529,18 @@ fun HomeScreen(
                     SectionCard(
                         title = "Net Worth",
                         showContentGap = netWorthExpanded,
+                        compactTopPadding = true,
                         trailing = {
-                            IconButton(onClick = { netWorthExpanded = !netWorthExpanded }) {
+                            Box(
+                                modifier = Modifier
+                                    .size(30.dp)
+                                    .clickable { netWorthExpanded = !netWorthExpanded },
+                                contentAlignment = Alignment.Center,
+                            ) {
                                 Icon(
                                     imageVector = if (netWorthExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
                                     contentDescription = if (netWorthExpanded) "Collapse" else "Expand",
+                                    modifier = Modifier.size(20.dp),
                                 )
                             }
                         },
