@@ -1,5 +1,6 @@
 package com.antoniszisis.mywallet.ui.reports
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,13 +16,16 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.MoreVert
@@ -64,11 +68,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.antoniszisis.mywallet.graphql.GetReportQuery
+import com.antoniszisis.mywallet.graphql.type.ReportRole
 import com.antoniszisis.mywallet.ui.components.ConfirmDialog
 import com.antoniszisis.mywallet.ui.components.ErrorMessage
 import com.antoniszisis.mywallet.ui.components.LoadingScreen
@@ -83,6 +89,7 @@ import com.antoniszisis.mywallet.util.formatMoney
 fun ReportDetailScreen(
     reportId: String,
     onNavigateBack: () -> Unit,
+    onNavigateToShare: () -> Unit,
     viewModel: ReportDetailViewModel = hiltViewModel(),
 ) {
     val hideAmounts = LocalHideAmounts.current
@@ -146,6 +153,9 @@ fun ReportDetailScreen(
                         }
                     } else {
                         val isLocked = state.report?.isLocked == true
+                        val myRole = state.report?.myRole
+                        val isOwner = myRole == null || myRole == ReportRole.OWNER
+                        val canEdit = myRole != ReportRole.VIEWER
                         IconButton(onClick = { showMenu = true }) {
                             Icon(Icons.Default.MoreVert, contentDescription = "More options")
                         }
@@ -153,43 +163,55 @@ fun ReportDetailScreen(
                             expanded = showMenu,
                             onDismissRequest = { showMenu = false },
                         ) {
+                            if (!isLocked && canEdit) {
+                                DropdownMenuItem(
+                                    text = { Text("Rename") },
+                                    leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },
+                                    onClick = {
+                                        showMenu = false
+                                        viewModel.startEditTitle()
+                                    }
+                                )
+                            }
+                            if (isOwner) {
+                                DropdownMenuItem(
+                                    text = { Text(if (isLocked) "Unlock Report" else "Lock Report") },
+                                    leadingIcon = {
+                                        Icon(
+                                            if (isLocked) Icons.Default.LockOpen else Icons.Default.Lock,
+                                            contentDescription = null,
+                                        )
+                                    },
+                                    onClick = {
+                                        showMenu = false
+                                        viewModel.toggleLock()
+                                    }
+                                )
+                            }
                             DropdownMenuItem(
-                                text = { Text("Rename") },
-                                leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },
-                                enabled = !isLocked,
+                                text = { Text(if (isOwner) "Share Report" else "Members") },
+                                leadingIcon = { Icon(Icons.Default.Group, contentDescription = null) },
                                 onClick = {
                                     showMenu = false
-                                    viewModel.startEditTitle()
+                                    onNavigateToShare()
                                 }
                             )
-                            DropdownMenuItem(
-                                text = { Text(if (isLocked) "Unlock Report" else "Lock Report") },
-                                leadingIcon = {
-                                    Icon(
-                                        if (isLocked) Icons.Default.LockOpen else Icons.Default.Lock,
-                                        contentDescription = null,
-                                    )
-                                },
-                                onClick = {
-                                    showMenu = false
-                                    viewModel.toggleLock()
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Delete Report", color = if (isLocked) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f) else MaterialTheme.colorScheme.error) },
-                                leadingIcon = {
-                                    Icon(
-                                        Icons.Default.Delete,
-                                        contentDescription = null,
-                                        tint = if (isLocked) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f) else MaterialTheme.colorScheme.error,
-                                    )
-                                },
-                                enabled = !isLocked,
-                                onClick = {
-                                    showMenu = false
-                                    viewModel.showDeleteReport()
-                                }
-                            )
+                            if (isOwner && !isLocked) {
+                                DropdownMenuItem(
+                                    text = { Text("Delete Report", color = MaterialTheme.colorScheme.error) },
+                                    leadingIcon = {
+                                        Icon(
+                                            Icons.Default.Delete,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.error,
+                                        )
+                                    },
+                                    onClick = {
+                                        showMenu = false
+                                        viewModel.showDeleteReport()
+                                    }
+                                )
+                            }
                         }
                     }
                 },
@@ -219,6 +241,7 @@ fun ReportDetailScreen(
                 val income = report.transactions.filter { it.type.rawValue == "INCOME" }.sumOf { it.amount }
                 val expenses = report.transactions.filter { it.type.rawValue == "EXPENSE" }.sumOf { it.amount }
                 val net = income - expenses
+                val sharedMembers = report.members.filter { it.role != ReportRole.OWNER }
 
                 PullToRefreshBox(
                     isRefreshing = state.isRefreshing,
@@ -232,6 +255,15 @@ fun ReportDetailScreen(
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
+                    if (sharedMembers.isNotEmpty()) {
+                        item {
+                            SharedWithRow(
+                                sharedMembers = sharedMembers,
+                                onClick = onNavigateToShare,
+                            )
+                        }
+                    }
+
                     // Summary cards
                     item {
                         Row(
@@ -403,6 +435,61 @@ fun ReportDetailScreen(
             isLoading = state.isDeletingReport,
             onConfirm = { viewModel.deleteReport(onNavigateBack) },
             onDismiss = viewModel::dismissDeleteReport,
+        )
+    }
+}
+
+@Composable
+private fun SharedWithRow(
+    sharedMembers: List<GetReportQuery.Member>,
+    onClick: () -> Unit,
+) {
+    val visible = sharedMembers.take(3)
+    val overflow = sharedMembers.size - visible.size
+    val names = sharedMembers.map { it.fullName ?: it.email.substringBefore("@") }
+    val label = when {
+        names.size <= 2 -> "Shared with " + names.joinToString(" & ")
+        else -> "Shared with ${names.take(2).joinToString(", ")} +${names.size - 2} more"
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(4.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            visible.forEach { member -> MemberAvatar(member = member, size = 24.dp) }
+            if (overflow > 0) {
+                Box(
+                    modifier = Modifier
+                        .size(24.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.15f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = "+$overflow",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(1f),
+        )
+        Icon(
+            Icons.Default.ChevronRight,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
