@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -75,6 +76,7 @@ fun NetWorthDetailScreen(
     needsRefresh: Boolean = false,
     onRefreshConsumed: () -> Unit = {},
     onNavigateToEdit: () -> Unit = {},
+    onNavigateToDuplicate: () -> Unit = {},
     viewModel: NetWorthDetailViewModel = hiltViewModel(),
 ) {
     val hideAmounts = LocalHideAmounts.current
@@ -123,6 +125,14 @@ fun NetWorthDetailScreen(
                             onClick = {
                                 showMenu = false
                                 onNavigateToEdit()
+                            },
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Duplicate") },
+                            leadingIcon = { Icon(Icons.Default.ContentCopy, contentDescription = null) },
+                            onClick = {
+                                showMenu = false
+                                onNavigateToDuplicate()
                             },
                         )
                         DropdownMenuItem(

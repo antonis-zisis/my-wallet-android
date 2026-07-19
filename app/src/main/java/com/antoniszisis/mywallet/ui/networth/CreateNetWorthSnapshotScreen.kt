@@ -55,6 +55,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.antoniszisis.mywallet.ui.components.LoadingScreen
 import com.antoniszisis.mywallet.ui.theme.LocalHideAmounts
 import com.antoniszisis.mywallet.ui.theme.incomeColor
 import com.antoniszisis.mywallet.ui.theme.netWorthColor
@@ -69,10 +70,36 @@ import java.util.Locale
 fun CreateNetWorthSnapshotScreen(
     onNavigateBack: () -> Unit,
     onSuccess: () -> Unit,
+    duplicateFromId: String? = null,
     viewModel: CreateNetWorthSnapshotViewModel = hiltViewModel(),
 ) {
     val hideAmounts = LocalHideAmounts.current
+    LaunchedEffect(duplicateFromId) {
+        if (duplicateFromId != null) viewModel.initDuplicate(duplicateFromId)
+    }
     val state by viewModel.uiState.collectAsState()
+    val topBarTitle = if (duplicateFromId != null) "Duplicate Snapshot" else "New Snapshot"
+
+    if (state.isLoading) {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text(topBarTitle) },
+                    navigationIcon = {
+                        IconButton(onClick = onNavigateBack) {
+                            Icon(Icons.Default.Close, contentDescription = "Close")
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.background,
+                    ),
+                )
+            }
+        ) { padding ->
+            LoadingScreen(modifier = Modifier.padding(padding))
+        }
+        return
+    }
 
     val assetEntries = remember(state.entries) { state.entries.filter { it.type == "ASSET" } }
     val liabilityEntries = remember(state.entries) { state.entries.filter { it.type == "LIABILITY" } }
@@ -93,7 +120,7 @@ fun CreateNetWorthSnapshotScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("New Snapshot") },
+                title = { Text(topBarTitle) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.Default.Close, contentDescription = "Close")
