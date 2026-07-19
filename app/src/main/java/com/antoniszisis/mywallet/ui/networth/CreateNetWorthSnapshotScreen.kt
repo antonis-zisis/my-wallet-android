@@ -448,5 +448,14 @@ internal fun EntryRow(
                 }
             }
         }
+
+        OutlinedTextField(
+            value = entry.notes,
+            onValueChange = { onUpdate { copy(notes = it) } },
+            label = { Text("Notes") },
+            placeholder = { Text("e.g. 52 shares") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }

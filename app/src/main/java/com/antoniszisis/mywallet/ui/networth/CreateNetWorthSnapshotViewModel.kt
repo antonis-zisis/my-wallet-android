@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.antoniszisis.mywallet.data.repository.NetWorthRepository
 import com.antoniszisis.mywallet.graphql.type.NetWorthEntryInput
+import com.apollographql.apollo.api.Optional
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -23,6 +24,7 @@ data class EntryDraft(
     val label: String = "",
     val amount: String = "",
     val category: String = ASSET_CATEGORIES.first(),
+    val notes: String = "",
 )
 
 data class CreateSnapshotUiState(
@@ -105,6 +107,7 @@ class CreateNetWorthSnapshotViewModel @Inject constructor(
                     label = entry.label.trim(),
                     amount = amount,
                     category = entry.category,
+                    notes = Optional.presentIfNotNull(entry.notes.trim().ifBlank { null }),
                 )
             } else null
         }

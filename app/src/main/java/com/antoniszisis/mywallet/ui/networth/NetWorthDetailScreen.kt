@@ -49,7 +49,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.antoniszisis.mywallet.graphql.GetNetWorthSnapshotQuery
@@ -284,6 +287,7 @@ private fun CollapsibleEntriesCard(
     categoryOrder: List<String>,
 ) {
     val hideAmounts = LocalHideAmounts.current
+    val notesColor = MaterialTheme.colorScheme.onSurfaceVariant
     var expanded by remember { mutableStateOf(true) }
     val chevronRotation by animateFloatAsState(targetValue = if (expanded) 180f else 0f, label = "chevron")
 
@@ -357,7 +361,14 @@ private fun CollapsibleEntriesCard(
                                         verticalAlignment = Alignment.CenterVertically,
                                     ) {
                                         Text(
-                                            entry.label,
+                                            text = buildAnnotatedString {
+                                                append(entry.label)
+                                                if (!entry.notes.isNullOrBlank()) {
+                                                    withStyle(SpanStyle(color = notesColor)) {
+                                                        append(" — ${entry.notes}")
+                                                    }
+                                                }
+                                            },
                                             style = MaterialTheme.typography.bodyMedium,
                                             modifier = Modifier.weight(1f),
                                         )
