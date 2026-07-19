@@ -10,6 +10,8 @@ import com.antoniszisis.mywallet.graphql.ResumeSubscriptionMutation
 import com.antoniszisis.mywallet.graphql.UpdateSubscriptionMutation
 import com.antoniszisis.mywallet.graphql.type.CreateSubscriptionInput
 import com.antoniszisis.mywallet.graphql.type.ResumeSubscriptionInput
+import com.antoniszisis.mywallet.graphql.type.SortOrder
+import com.antoniszisis.mywallet.graphql.type.SubscriptionSortField
 import com.antoniszisis.mywallet.graphql.type.UpdateSubscriptionInput
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -20,13 +22,19 @@ class SubscriptionRepository @Inject constructor(
 ) {
     suspend fun getSubscriptions(
         page: Int? = null,
+        pageSize: Int? = null,
         active: Boolean? = null,
+        sortBy: SubscriptionSortField? = null,
+        sortOrder: SortOrder? = null,
     ): Result<GetSubscriptionsQuery.Subscriptions> {
         return try {
             val response = apollo.query(
                 GetSubscriptionsQuery(
                     page = Optional.presentIfNotNull(page),
+                    pageSize = Optional.presentIfNotNull(pageSize),
                     active = Optional.presentIfNotNull(active),
+                    sortBy = Optional.presentIfNotNull(sortBy),
+                    sortOrder = Optional.presentIfNotNull(sortOrder),
                 )
             ).execute()
             val data = response.data?.subscriptions ?: error("No data")

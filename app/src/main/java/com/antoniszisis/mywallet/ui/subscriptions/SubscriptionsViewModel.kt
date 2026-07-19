@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.antoniszisis.mywallet.data.repository.SubscriptionRepository
 import com.antoniszisis.mywallet.graphql.GetSubscriptionsQuery
+import com.antoniszisis.mywallet.graphql.type.SortOrder
+import com.antoniszisis.mywallet.graphql.type.SubscriptionSortField
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -13,6 +15,21 @@ import com.antoniszisis.mywallet.util.toInputDate
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import javax.inject.Inject
+
+/** Loads every subscription in one page — the screen has no pagination UI (matches server's max pageSize). */
+private const val PAGE_SIZE = 100
+
+/** Mirrors the web app's subscription sort options (`SUBSCRIPTION_SORT_OPTIONS` / `SUBSCRIPTION_SORT_CONFIG`). */
+enum class SubscriptionSortOption(
+    val label: String,
+    val sortBy: SubscriptionSortField,
+    val sortOrder: SortOrder,
+) {
+    NAME("Name (A–Z)", SubscriptionSortField.NAME, SortOrder.ASC),
+    COST_HIGH_LOW("Cost (High–Low)", SubscriptionSortField.MONTHLY_COST, SortOrder.DESC),
+    COST_LOW_HIGH("Cost (Low–High)", SubscriptionSortField.MONTHLY_COST, SortOrder.ASC),
+    NEXT_RENEWAL("Next Renewal", SubscriptionSortField.NEXT_RENEWAL, SortOrder.ASC),
+}
 
 data class SubscriptionFormState(
     val id: String? = null,
@@ -48,6 +65,7 @@ data class SubscriptionsUiState(
     val inactiveSubscriptions: List<GetSubscriptionsQuery.Item> = emptyList(),
     val inactiveTotalCount: Int = 0,
     val inactiveCurrentPage: Int = 1,
+    val activeSortOption: SubscriptionSortOption = SubscriptionSortOption.NAME,
     val showInactive: Boolean = false,
     val showForm: Boolean = false,
     val form: SubscriptionFormState = SubscriptionFormState(),
@@ -76,8 +94,19 @@ class SubscriptionsViewModel @Inject constructor(
     fun loadAll() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-            val activeDeferred = async { subscriptionRepository.getSubscriptions(page = 1, active = true) }
-            val inactiveDeferred = async { subscriptionRepository.getSubscriptions(page = 1, active = false) }
+            val sortOption = _uiState.value.activeSortOption
+            val activeDeferred = async {
+                subscriptionRepository.getSubscriptions(
+                    page = 1,
+                    pageSize = PAGE_SIZE,
+                    active = true,
+                    sortBy = sortOption.sortBy,
+                    sortOrder = sortOption.sortOrder,
+                )
+            }
+            val inactiveDeferred = async {
+                subscriptionRepository.getSubscriptions(page = 1, pageSize = PAGE_SIZE, active = false)
+            }
 
             val activeResult = activeDeferred.await()
             val inactiveResult = inactiveDeferred.await()
@@ -96,8 +125,19 @@ class SubscriptionsViewModel @Inject constructor(
     fun refresh() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isRefreshing = true, error = null)
-            val activeDeferred = async { subscriptionRepository.getSubscriptions(page = 1, active = true) }
-            val inactiveDeferred = async { subscriptionRepository.getSubscriptions(page = 1, active = false) }
+            val sortOption = _uiState.value.activeSortOption
+            val activeDeferred = async {
+                subscriptionRepository.getSubscriptions(
+                    page = 1,
+                    pageSize = PAGE_SIZE,
+                    active = true,
+                    sortBy = sortOption.sortBy,
+                    sortOrder = sortOption.sortOrder,
+                )
+            }
+            val inactiveDeferred = async {
+                subscriptionRepository.getSubscriptions(page = 1, pageSize = PAGE_SIZE, active = false)
+            }
             val activeResult = activeDeferred.await()
             val inactiveResult = inactiveDeferred.await()
             _uiState.value = _uiState.value.copy(
@@ -109,6 +149,12 @@ class SubscriptionsViewModel @Inject constructor(
                 error = activeResult.exceptionOrNull()?.message,
             )
         }
+    }
+
+    fun onActiveSortOptionChange(option: SubscriptionSortOption) {
+        if (_uiState.value.activeSortOption == option) return
+        _uiState.value = _uiState.value.copy(activeSortOption = option)
+        refresh()
     }
 
     fun toggleShowInactive() {

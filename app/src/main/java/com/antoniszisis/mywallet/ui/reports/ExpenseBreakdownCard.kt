@@ -9,6 +9,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -92,22 +93,30 @@ fun ExpenseBreakdownCard(
 
     BreakdownCard(
         title = "Expense Breakdown",
-        segments = segments,
         isExpanded = isExpanded,
         chevronRotation = chevronRotation,
         onToggle = { isExpanded = !isExpanded },
         modifier = modifier,
-    )
+    ) {
+        DonutChart(
+            segments = segments,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(200.dp),
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        BreakdownLegend(segments = segments)
+    }
 }
 
 @Composable
 internal fun BreakdownCard(
     title: String,
-    segments: List<ChartSegment>,
     isExpanded: Boolean,
     chevronRotation: Float,
     onToggle: () -> Unit,
     modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit,
 ) {
     Card(
         modifier = modifier,
@@ -140,16 +149,8 @@ internal fun BreakdownCard(
                     modifier = Modifier
                         .padding(horizontal = 16.dp)
                         .padding(bottom = 16.dp),
-                ) {
-                    DonutChart(
-                        segments = segments,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(200.dp),
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    BreakdownLegend(segments = segments)
-                }
+                    content = content,
+                )
             }
         }
     }

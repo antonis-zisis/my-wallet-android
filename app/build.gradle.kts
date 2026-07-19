@@ -45,6 +45,12 @@ android {
             "GRAPHQL_URL",
             "\"${localProperties["graphql.url"] ?: "http://10.0.2.2:4000/graphql"}\""
         )
+        // Logo.dev token (subscription website icons)
+        buildConfigField(
+            "String",
+            "LOGO_DEV_TOKEN",
+            "\"${localProperties["logo.dev.token"] ?: ""}\""
+        )
     }
 
     signingConfigs {
@@ -127,6 +133,10 @@ dependencies {
 
     // DataStore
     implementation(libs.datastore.preferences)
+
+    // Coil (subscription logo icons)
+    implementation(libs.coil.compose)
+    implementation(libs.coil.network.okhttp)
 
     // Debug
     debugImplementation(libs.compose.ui.tooling)
