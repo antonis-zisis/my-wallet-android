@@ -83,6 +83,7 @@ import com.antoniszisis.mywallet.ui.components.ConfirmDialog
 import com.antoniszisis.mywallet.ui.components.EmptyState
 import com.antoniszisis.mywallet.ui.components.ErrorMessage
 import com.antoniszisis.mywallet.ui.components.LoadingScreen
+import com.antoniszisis.mywallet.ui.theme.CategoryColors
 import com.antoniszisis.mywallet.ui.theme.LocalHideAmounts
 import com.antoniszisis.mywallet.ui.theme.cancelledBadgeColors
 import com.antoniszisis.mywallet.ui.theme.trialBadgeColors
@@ -524,12 +525,11 @@ private fun SubscriptionCard(
                 val cycleLabel = if (sub.billingCycle == "MONTHLY") "Monthly" else "Yearly"
                 val cycleBg = MaterialTheme.colorScheme.surfaceVariant
                 val cycleFg = MaterialTheme.colorScheme.onSurfaceVariant
-                val altCost = if (hideAmounts) "••••" else if (sub.billingCycle == "MONTHLY") {
-                    "(${formatMoney(sub.amount * 12)}/yr)"
-                } else {
-                    "(${formatMoney(sub.monthlyCost)}/mo)"
+                val amountText = when {
+                    hideAmounts -> "••••"
+                    sub.billingCycle == "MONTHLY" -> formatMoney(sub.amount)
+                    else -> "${formatMoney(sub.amount)} (${formatMoney(sub.monthlyCost)}/mo)"
                 }
-                val amountText = "${if (hideAmounts) "••••" else formatMoney(sub.amount)} $altCost"
 
                 val (dateText, isAmberSubtitle) = when {
                     isCancelled && sub.endDate != null -> {
@@ -578,6 +578,11 @@ private fun SubscriptionCard(
                         fontWeight = FontWeight.Medium,
                     )
                     SubscriptionBadge(cycleLabel, cycleBg, cycleFg)
+                    val category = sub.category?.takeIf { it.isNotBlank() }
+                    if (category != null) {
+                        val categoryColor = CategoryColors.forSubscription(category)
+                        SubscriptionBadge(category, categoryColor.copy(alpha = 0.12f), categoryColor)
+                    }
                     if (isActiveTrial) {
                         val (trialBg, trialFg) = trialBadgeColors()
                         SubscriptionBadge("Trial", trialBg, trialFg)

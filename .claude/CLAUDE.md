@@ -3,6 +3,7 @@
 ## Rules
 
 - **Never create a git commit unless the user explicitly asks for one.**
+- **Never install or launch the app on the emulator/device, or drive it via adb, to test or verify changes.** Verify by reading code, compiling (`./gradlew compileDebugKotlin` / `assembleDebug`), and reasoning through the change instead. Only touch the emulator if the user explicitly asks for it in that session.
 
 ## Project
 
