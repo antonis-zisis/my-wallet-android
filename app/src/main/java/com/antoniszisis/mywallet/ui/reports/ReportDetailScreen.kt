@@ -1,5 +1,6 @@
 package com.antoniszisis.mywallet.ui.reports
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,10 +16,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -65,6 +68,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -237,6 +241,7 @@ fun ReportDetailScreen(
                 val income = report.transactions.filter { it.type.rawValue == "INCOME" }.sumOf { it.amount }
                 val expenses = report.transactions.filter { it.type.rawValue == "EXPENSE" }.sumOf { it.amount }
                 val net = income - expenses
+                val sharedMembers = report.members.filter { it.role != ReportRole.OWNER }
 
                 PullToRefreshBox(
                     isRefreshing = state.isRefreshing,
@@ -250,6 +255,15 @@ fun ReportDetailScreen(
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
+                    if (sharedMembers.isNotEmpty()) {
+                        item {
+                            SharedWithRow(
+                                sharedMembers = sharedMembers,
+                                onClick = onNavigateToShare,
+                            )
+                        }
+                    }
+
                     // Summary cards
                     item {
                         Row(
@@ -421,6 +435,61 @@ fun ReportDetailScreen(
             isLoading = state.isDeletingReport,
             onConfirm = { viewModel.deleteReport(onNavigateBack) },
             onDismiss = viewModel::dismissDeleteReport,
+        )
+    }
+}
+
+@Composable
+private fun SharedWithRow(
+    sharedMembers: List<GetReportQuery.Member>,
+    onClick: () -> Unit,
+) {
+    val visible = sharedMembers.take(3)
+    val overflow = sharedMembers.size - visible.size
+    val names = sharedMembers.map { it.fullName ?: it.email.substringBefore("@") }
+    val label = when {
+        names.size <= 2 -> "Shared with " + names.joinToString(" & ")
+        else -> "Shared with ${names.take(2).joinToString(", ")} +${names.size - 2} more"
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(4.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            visible.forEach { member -> MemberAvatar(member = member, size = 24.dp) }
+            if (overflow > 0) {
+                Box(
+                    modifier = Modifier
+                        .size(24.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.15f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = "+$overflow",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(1f),
+        )
+        Icon(
+            Icons.Default.ChevronRight,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }

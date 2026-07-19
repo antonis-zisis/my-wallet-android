@@ -53,6 +53,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.antoniszisis.mywallet.graphql.GetReportQuery
@@ -412,17 +413,20 @@ private fun CompactRoleMenu(
 }
 
 @Composable
-private fun MemberAvatar(member: GetReportQuery.Member) {
+fun MemberAvatar(
+    member: GetReportQuery.Member,
+    size: Dp = 36.dp,
+) {
     Box(
         modifier = Modifier
-            .size(36.dp)
+            .size(size)
             .clip(CircleShape)
             .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
         contentAlignment = Alignment.Center,
     ) {
         Text(
             text = initials(member.fullName ?: member.email),
-            style = MaterialTheme.typography.labelMedium,
+            style = if (size < 32.dp) MaterialTheme.typography.labelSmall else MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.primary,
         )
