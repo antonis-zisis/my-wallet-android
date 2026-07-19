@@ -5,7 +5,7 @@ enum TransactionType {
 
 type Query {
   health: String!
-  reports(page: Int, pageSize: Int): ReportsResult!
+  reports(page: Int, pageSize: Int, search: String, sortBy: ReportSortField, sortOrder: SortOrder): ReportsResult!
   report(id: ID!): Report
   transactions: [Transaction!]!
   transaction(id: ID!): Transaction
@@ -49,6 +49,8 @@ type Report {
   id: ID!
   title: String!
   isLocked: Boolean!
+  transactionCount: Int!
+  netBalance: Float!
   transactions: [Transaction!]!
   createdAt: String!
   updatedAt: String!
@@ -57,6 +59,16 @@ type Report {
 type ReportsResult {
   items: [Report!]!
   totalCount: Int!
+}
+
+enum ReportSortField {
+  NEWEST
+  NET_BALANCE
+}
+
+enum SortOrder {
+  ASC
+  DESC
 }
 
 input CreateReportInput {

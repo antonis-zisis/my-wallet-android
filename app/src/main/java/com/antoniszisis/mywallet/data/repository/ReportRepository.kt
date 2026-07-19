@@ -11,6 +11,8 @@ import com.antoniszisis.mywallet.graphql.GetReportsQuery
 import com.antoniszisis.mywallet.graphql.GetReportsSummaryQuery
 import com.antoniszisis.mywallet.graphql.UpdateReportMutation
 import com.antoniszisis.mywallet.graphql.type.CreateReportInput
+import com.antoniszisis.mywallet.graphql.type.ReportSortField
+import com.antoniszisis.mywallet.graphql.type.SortOrder
 import com.antoniszisis.mywallet.graphql.type.UpdateReportInput
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -22,12 +24,18 @@ class ReportRepository @Inject constructor(
     suspend fun getReports(
         page: Int? = null,
         pageSize: Int? = null,
+        search: String? = null,
+        sortBy: ReportSortField? = null,
+        sortOrder: SortOrder? = null,
     ): Result<GetReportsQuery.Reports> {
         return try {
             val response = apollo.query(
                 GetReportsQuery(
                     page = Optional.presentIfNotNull(page),
                     pageSize = Optional.presentIfNotNull(pageSize),
+                    search = Optional.presentIfNotNull(search),
+                    sortBy = Optional.presentIfNotNull(sortBy),
+                    sortOrder = Optional.presentIfNotNull(sortOrder),
                 )
             ).execute()
             val data = response.data?.reports ?: error("No data")
