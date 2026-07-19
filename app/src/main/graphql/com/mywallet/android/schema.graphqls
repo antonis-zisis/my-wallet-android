@@ -9,7 +9,7 @@ type Query {
   report(id: ID!): Report
   transactions: [Transaction!]!
   transaction(id: ID!): Transaction
-  subscriptions(page: Int, active: Boolean): SubscriptionsResult!
+  subscriptions(page: Int, pageSize: Int, active: Boolean, sortBy: SubscriptionSortField, sortOrder: SortOrder): SubscriptionsResult!
   netWorthSnapshots(page: Int): NetWorthSnapshotsResult!
   netWorthSnapshot(id: ID!): NetWorthSnapshot
   contracts(page: Int, expired: Boolean): ContractsResult!
@@ -152,6 +152,7 @@ type AppSubscription {
   endDate: String
   cancelledAt: String
   trialEndsAt: String
+  category: String
   notes: String
   paymentMethod: String
   url: String
@@ -163,6 +164,12 @@ type AppSubscription {
 type SubscriptionsResult {
   items: [AppSubscription!]!
   totalCount: Int!
+}
+
+enum SubscriptionSortField {
+  NAME
+  MONTHLY_COST
+  NEXT_RENEWAL
 }
 
 input ResumeSubscriptionInput {

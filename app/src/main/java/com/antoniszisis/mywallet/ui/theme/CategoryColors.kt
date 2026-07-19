@@ -46,10 +46,23 @@ object CategoryColors {
         "Student Loan" to Color(0xFFF59E0B),
     )
 
+    val subscription: Map<String, Color> = mapOf(
+        "Education" to Color(0xFFF59E0B),
+        "Entertainment" to Color(0xFFA855F7),
+        "Finance" to Color(0xFF10B981),
+        "Health" to Color(0xFF14B8A6),
+        "Music" to Color(0xFFEC4899),
+        "News" to Color(0xFFFB923C),
+        "Other" to Color(0xFF64748B),
+        "Productivity" to Color(0xFF3B82F6),
+        "Utilities" to Color(0xFF0891B2),
+    )
+
     val fallback = Color(0xFF9CA3AF)
 
     fun forExpense(category: String) = expense[category] ?: fallback
     fun forAsset(category: String) = asset[category] ?: fallback
     fun forLiability(category: String) = liability[category] ?: fallback
     fun forBudgetBucket(bucket: String) = budgetBucket[bucket] ?: fallback
+    fun forSubscription(category: String) = subscription[category] ?: fallback
 }

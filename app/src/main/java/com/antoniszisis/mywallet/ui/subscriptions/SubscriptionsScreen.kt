@@ -26,6 +26,8 @@ import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
@@ -343,13 +345,29 @@ fun SubscriptionsScreen(
                         }
                     }
 
-                    // Active section header
+                    // Spending by category
                     item {
-                        Text(
-                            "Active (${state.activeSubscriptions.size})",
-                            style = MaterialTheme.typography.titleMedium,
-                            modifier = Modifier.padding(top = 8.dp),
-                        )
+                        SubscriptionBreakdownCard(subscriptions = state.activeSubscriptions)
+                    }
+
+                    // Active section header + sort
+                    item {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                "Active (${state.activeSubscriptions.size})",
+                                style = MaterialTheme.typography.titleMedium,
+                            )
+                            SubscriptionSortMenu(
+                                selected = state.activeSortOption,
+                                onSelect = viewModel::onActiveSortOptionChange,
+                            )
+                        }
                     }
 
                     if (state.activeSubscriptions.isEmpty()) {
@@ -642,6 +660,43 @@ private fun SubscriptionCard(
                 )
             }
             } // Box
+        }
+    }
+}
+
+@Composable
+private fun SubscriptionSortMenu(
+    selected: SubscriptionSortOption,
+    onSelect: (SubscriptionSortOption) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Box {
+        IconButton(onClick = { expanded = true }) {
+            Icon(
+                Icons.Default.SwapVert,
+                contentDescription = "Sort subscriptions",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+        ) {
+            SubscriptionSortOption.entries.forEach { option ->
+                DropdownMenuItem(
+                    text = { Text(option.label) },
+                    leadingIcon = {
+                        if (option == selected) {
+                            Icon(Icons.Default.Check, contentDescription = null)
+                        }
+                    },
+                    onClick = {
+                        expanded = false
+                        onSelect(option)
+                    },
+                )
+            }
         }
     }
 }

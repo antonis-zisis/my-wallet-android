@@ -1,5 +1,5 @@
-query GetSubscriptions($page: Int, $active: Boolean) {
-  subscriptions(page: $page, active: $active) {
+query GetSubscriptions($page: Int, $pageSize: Int, $active: Boolean, $sortBy: SubscriptionSortField, $sortOrder: SortOrder) {
+  subscriptions(page: $page, pageSize: $pageSize, active: $active, sortBy: $sortBy, sortOrder: $sortOrder) {
     items {
       id
       name
@@ -10,6 +10,7 @@ query GetSubscriptions($page: Int, $active: Boolean) {
       endDate
       cancelledAt
       trialEndsAt
+      category
       notes
       paymentMethod
       url
