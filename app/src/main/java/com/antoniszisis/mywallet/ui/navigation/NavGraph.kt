@@ -120,7 +120,7 @@ fun AppNavGraph(
                     navController.navigate(Screen.NetWorthDetail.createRoute(snapshotId))
                 },
                 onNavigateToCreate = {
-                    navController.navigate(Screen.CreateNetWorthSnapshot.route)
+                    navController.navigate(Screen.CreateNetWorthSnapshot.createRoute())
                 },
                 needsRefresh = snapshotCreated.value,
                 onRefreshConsumed = {
@@ -129,14 +129,28 @@ fun AppNavGraph(
             )
         }
 
-        composable(Screen.CreateNetWorthSnapshot.route) {
+        composable(
+            route = Screen.CreateNetWorthSnapshot.route,
+            arguments = listOf(
+                navArgument("duplicateFromId") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
+            ),
+        ) { backStackEntry ->
+            val duplicateFromId = backStackEntry.arguments?.getString("duplicateFromId")
             CreateNetWorthSnapshotScreen(
+                duplicateFromId = duplicateFromId,
                 onNavigateBack = { navController.popBackStack() },
                 onSuccess = {
-                    navController.previousBackStackEntry
-                        ?.savedStateHandle
-                        ?.set("snapshotCreated", true)
-                    navController.popBackStack()
+                    val poppedToList = navController.popBackStack(Screen.NetWorth.route, inclusive = false)
+                    if (poppedToList) {
+                        navController.getBackStackEntry(Screen.NetWorth.route)
+                            .savedStateHandle["snapshotCreated"] = true
+                    } else {
+                        navController.popBackStack()
+                    }
                 },
             )
         }
@@ -156,6 +170,9 @@ fun AppNavGraph(
                 onRefreshConsumed = { backStackEntry.savedStateHandle["snapshotUpdated"] = false },
                 onNavigateToEdit = {
                     navController.navigate(Screen.EditNetWorthSnapshot.createRoute(snapshotId))
+                },
+                onNavigateToDuplicate = {
+                    navController.navigate(Screen.CreateNetWorthSnapshot.createRoute(snapshotId))
                 },
             )
         }
