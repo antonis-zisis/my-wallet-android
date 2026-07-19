@@ -16,14 +16,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.ExpandLess
-import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -38,7 +37,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -51,11 +49,14 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -68,12 +69,14 @@ import com.antoniszisis.mywallet.ui.components.ConfirmDialog
 import com.antoniszisis.mywallet.ui.components.EmptyState
 import com.antoniszisis.mywallet.ui.components.ErrorMessage
 import com.antoniszisis.mywallet.ui.components.LoadingScreen
+import com.antoniszisis.mywallet.ui.components.SearchSortBar
 import com.antoniszisis.mywallet.ui.theme.LocalHideAmounts
 import com.antoniszisis.mywallet.ui.theme.cancelledBadgeColors
 import com.antoniszisis.mywallet.ui.theme.trialBadgeColors
 import com.antoniszisis.mywallet.util.formatDate
 import com.antoniszisis.mywallet.util.formatMoney
 import com.antoniszisis.mywallet.util.getDaysUntil
+import kotlinx.coroutines.flow.distinctUntilChanged
 import java.time.LocalDate
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -83,10 +86,38 @@ fun ContractsScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
 
+    val listState = rememberLazyListState()
+    val shouldLoadMore by remember {
+        derivedStateOf {
+            val lastVisible = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1
+            val total = listState.layoutInfo.totalItemsCount
+            total > 0 && lastVisible >= total - 3
+        }
+    }
+
+    LaunchedEffect(listState) {
+        snapshotFlow { shouldLoadMore }
+            .distinctUntilChanged()
+            .collect { trigger ->
+                if (trigger) viewModel.loadMore()
+            }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Contracts") },
+                title = {
+                    Column {
+                        Text("Contracts")
+                        if (!state.isLoading && state.error == null && state.totalCount > 0) {
+                            Text(
+                                text = if (state.totalCount == 1) "1 contract" else "${state.totalCount} contracts",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background,
                 ),
@@ -98,80 +129,73 @@ fun ContractsScreen(
             }
         }
     ) { padding ->
-        when {
-            state.isLoading -> LoadingScreen()
-            state.error != null -> ErrorMessage(
-                message = state.error!!,
-                onRetry = viewModel::loadAll,
-                modifier = Modifier.padding(padding),
-            )
-            else -> {
-                PullToRefreshBox(
-                    isRefreshing = state.isRefreshing,
-                    onRefresh = viewModel::refresh,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding),
-                ) {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+        ) {
+            val showControls = !state.isLoading && state.error == null &&
+                (state.totalCount > 0 || state.searchQuery.isNotBlank())
+            if (showControls) {
+                SearchSortBar(
+                    searchQuery = state.searchQuery,
+                    onSearchQueryChange = viewModel::onSearchQueryChange,
+                    searchPlaceholder = "Search by provider…",
+                    sortOptions = ContractSortOption.entries,
+                    selectedSortOption = state.sortOption,
+                    sortOptionLabel = { it.label },
+                    onSortOptionChange = viewModel::onSortOptionChange,
+                    sortContentDescription = "Sort contracts",
+                )
+            }
+            when {
+                state.isLoading -> LoadingScreen()
+                state.error != null -> ErrorMessage(
+                    message = state.error!!,
+                    onRetry = { viewModel.refresh() },
+                )
+                state.contracts.isEmpty() -> EmptyState(
+                    if (state.searchQuery.isNotBlank()) {
+                        "No contracts match your search"
+                    } else {
+                        "No contracts yet. Create your first one!"
+                    }
+                )
+                else -> {
+                    PullToRefreshBox(
+                        isRefreshing = state.isRefreshing,
+                        onRefresh = viewModel::refresh,
+                        modifier = Modifier.weight(1f),
                     ) {
-                        item {
-                            Text(
-                                "Current (${state.currentContracts.size})",
-                                style = MaterialTheme.typography.titleMedium,
-                            )
-                        }
-
-                        if (state.currentContracts.isEmpty()) {
-                            item { EmptyState("No current contracts") }
-                        }
-
-                        items(state.currentContracts, key = { it.id }) { contract ->
-                            ContractCard(
-                                contract = contract,
-                                onEdit = { viewModel.showEditForm(contract) },
-                                onDelete = { viewModel.confirmDelete(contract) },
-                            )
-                        }
-
-                        item {
-                            HorizontalDivider()
-                            Spacer(Modifier.height(4.dp))
-                            TextButton(
-                                onClick = viewModel::toggleShowExpired,
-                                modifier = Modifier.fillMaxWidth(),
-                            ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    Text("Expired (${state.expiredTotalCount})")
-                                    Icon(
-                                        if (state.showExpired) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                                        contentDescription = null,
-                                    )
-                                }
-                            }
-                        }
-
-                        if (state.showExpired) {
-                            if (state.expiredContracts.isEmpty()) {
-                                item { EmptyState("No expired contracts") }
-                            }
-                            items(state.expiredContracts, key = { it.id }) { contract ->
+                        LazyColumn(
+                            state = listState,
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            items(state.contracts, key = { it.id }) { contract ->
                                 ContractCard(
                                     contract = contract,
                                     onEdit = { viewModel.showEditForm(contract) },
                                     onDelete = { viewModel.confirmDelete(contract) },
                                 )
                             }
-                        }
 
-                        item { Spacer(Modifier.height(72.dp)) }
+                            if (state.isLoadingMore) {
+                                item {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(16.dp),
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        CircularProgressIndicator()
+                                    }
+                                }
+                            }
+
+                            item { Spacer(Modifier.height(72.dp)) }
+                        }
                     }
                 }
             }

@@ -1,5 +1,5 @@
-query GetContracts($page: Int, $expired: Boolean) {
-  contracts(page: $page, expired: $expired) {
+query GetContracts($page: Int, $pageSize: Int, $expired: Boolean, $search: String, $sortBy: ContractSortField, $sortOrder: SortOrder) {
+  contracts(page: $page, pageSize: $pageSize, expired: $expired, search: $search, sortBy: $sortBy, sortOrder: $sortOrder) {
     items {
       id
       category
