@@ -1,12 +1,14 @@
 ## Copy this file to local.properties and fill in your values.
-## local.properties is gitignored and never committed.
 
-# Android SDK path in WSL
+# Android SDK path
 sdk.dir=/home/your-username/android
 
-# Supabase credentials (from your Supabase project → Settings → API)
+# Supabase credentials (from your Supabase project settings)
 supabase.url=https://YOUR_PROJECT_ID.supabase.co
 supabase.publishable_key=YOUR_SUPABASE_PUBLISHABLE_KEY
+
+# Logo.dev token — used to fetch subscription website icons (https://logo.dev)
+logo.dev.token=YOUR_LOGO_DEV_TOKEN
 
 # GraphQL backend URL
 # Development — emulator reaches Windows host via 10.0.2.2
