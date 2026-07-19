@@ -17,6 +17,7 @@ import com.antoniszisis.mywallet.ui.networth.NetWorthScreen
 import com.antoniszisis.mywallet.ui.profile.ProfileScreen
 import com.antoniszisis.mywallet.ui.reports.ReportDetailScreen
 import com.antoniszisis.mywallet.ui.reports.ReportsScreen
+import com.antoniszisis.mywallet.ui.reports.ShareReportScreen
 import com.antoniszisis.mywallet.ui.subscriptions.SubscriptionsScreen
 import com.antoniszisis.mywallet.ui.theme.ThemeMode
 
@@ -85,6 +86,19 @@ fun AppNavGraph(
             ReportDetailScreen(
                 reportId = reportId,
                 onNavigateBack = { navController.popBackStack() },
+                onNavigateToShare = { navController.navigate(Screen.ReportShare.createRoute(reportId)) },
+            )
+        }
+
+        composable(
+            route = Screen.ReportShare.route,
+            arguments = listOf(navArgument("reportId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val reportId = backStackEntry.arguments?.getString("reportId") ?: return@composable
+            ShareReportScreen(
+                reportId = reportId,
+                onNavigateBack = { navController.popBackStack() },
+                onLeft = { navController.popBackStack(Screen.Reports.route, inclusive = false) },
             )
         }
 

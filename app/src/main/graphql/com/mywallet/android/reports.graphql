@@ -18,6 +18,14 @@ query GetReport($id: ID!) {
     id
     title
     isLocked
+    myRole
+    members {
+      id
+      userId
+      email
+      fullName
+      role
+    }
     createdAt
     updatedAt
     transactions {
@@ -81,4 +89,47 @@ mutation UnlockReport($id: ID!) {
     id
     isLocked
   }
+}
+
+mutation ShareReport($input: ShareReportInput!) {
+  shareReport(input: $input) {
+    id
+    members {
+      id
+      userId
+      email
+      fullName
+      role
+    }
+  }
+}
+
+mutation UpdateReportShareRole($input: UpdateReportShareRoleInput!) {
+  updateReportShareRole(input: $input) {
+    id
+    members {
+      id
+      userId
+      email
+      fullName
+      role
+    }
+  }
+}
+
+mutation UnshareReport($id: ID!) {
+  unshareReport(id: $id) {
+    id
+    members {
+      id
+      userId
+      email
+      fullName
+      role
+    }
+  }
+}
+
+mutation LeaveSharedReport($reportId: ID!) {
+  leaveSharedReport(reportId: $reportId)
 }

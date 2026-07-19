@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.MoreVert
@@ -69,6 +70,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.antoniszisis.mywallet.graphql.GetReportQuery
+import com.antoniszisis.mywallet.graphql.type.ReportRole
 import com.antoniszisis.mywallet.ui.components.ConfirmDialog
 import com.antoniszisis.mywallet.ui.components.ErrorMessage
 import com.antoniszisis.mywallet.ui.components.LoadingScreen
@@ -83,6 +85,7 @@ import com.antoniszisis.mywallet.util.formatMoney
 fun ReportDetailScreen(
     reportId: String,
     onNavigateBack: () -> Unit,
+    onNavigateToShare: () -> Unit,
     viewModel: ReportDetailViewModel = hiltViewModel(),
 ) {
     val hideAmounts = LocalHideAmounts.current
@@ -146,6 +149,9 @@ fun ReportDetailScreen(
                         }
                     } else {
                         val isLocked = state.report?.isLocked == true
+                        val myRole = state.report?.myRole
+                        val isOwner = myRole == null || myRole == ReportRole.OWNER
+                        val canEdit = myRole != ReportRole.VIEWER
                         IconButton(onClick = { showMenu = true }) {
                             Icon(Icons.Default.MoreVert, contentDescription = "More options")
                         }
@@ -153,43 +159,55 @@ fun ReportDetailScreen(
                             expanded = showMenu,
                             onDismissRequest = { showMenu = false },
                         ) {
+                            if (!isLocked && canEdit) {
+                                DropdownMenuItem(
+                                    text = { Text("Rename") },
+                                    leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },
+                                    onClick = {
+                                        showMenu = false
+                                        viewModel.startEditTitle()
+                                    }
+                                )
+                            }
+                            if (isOwner) {
+                                DropdownMenuItem(
+                                    text = { Text(if (isLocked) "Unlock Report" else "Lock Report") },
+                                    leadingIcon = {
+                                        Icon(
+                                            if (isLocked) Icons.Default.LockOpen else Icons.Default.Lock,
+                                            contentDescription = null,
+                                        )
+                                    },
+                                    onClick = {
+                                        showMenu = false
+                                        viewModel.toggleLock()
+                                    }
+                                )
+                            }
                             DropdownMenuItem(
-                                text = { Text("Rename") },
-                                leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },
-                                enabled = !isLocked,
+                                text = { Text(if (isOwner) "Share Report" else "Members") },
+                                leadingIcon = { Icon(Icons.Default.Group, contentDescription = null) },
                                 onClick = {
                                     showMenu = false
-                                    viewModel.startEditTitle()
+                                    onNavigateToShare()
                                 }
                             )
-                            DropdownMenuItem(
-                                text = { Text(if (isLocked) "Unlock Report" else "Lock Report") },
-                                leadingIcon = {
-                                    Icon(
-                                        if (isLocked) Icons.Default.LockOpen else Icons.Default.Lock,
-                                        contentDescription = null,
-                                    )
-                                },
-                                onClick = {
-                                    showMenu = false
-                                    viewModel.toggleLock()
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Delete Report", color = if (isLocked) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f) else MaterialTheme.colorScheme.error) },
-                                leadingIcon = {
-                                    Icon(
-                                        Icons.Default.Delete,
-                                        contentDescription = null,
-                                        tint = if (isLocked) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f) else MaterialTheme.colorScheme.error,
-                                    )
-                                },
-                                enabled = !isLocked,
-                                onClick = {
-                                    showMenu = false
-                                    viewModel.showDeleteReport()
-                                }
-                            )
+                            if (isOwner && !isLocked) {
+                                DropdownMenuItem(
+                                    text = { Text("Delete Report", color = MaterialTheme.colorScheme.error) },
+                                    leadingIcon = {
+                                        Icon(
+                                            Icons.Default.Delete,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.error,
+                                        )
+                                    },
+                                    onClick = {
+                                        showMenu = false
+                                        viewModel.showDeleteReport()
+                                    }
+                                )
+                            }
                         }
                     }
                 },
