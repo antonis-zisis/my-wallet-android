@@ -6,7 +6,9 @@ import com.antoniszisis.mywallet.graphql.CreateContractMutation
 import com.antoniszisis.mywallet.graphql.DeleteContractMutation
 import com.antoniszisis.mywallet.graphql.GetContractsQuery
 import com.antoniszisis.mywallet.graphql.UpdateContractMutation
+import com.antoniszisis.mywallet.graphql.type.ContractSortField
 import com.antoniszisis.mywallet.graphql.type.CreateContractInput
+import com.antoniszisis.mywallet.graphql.type.SortOrder
 import com.antoniszisis.mywallet.graphql.type.UpdateContractInput
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -17,13 +19,21 @@ class ContractRepository @Inject constructor(
 ) {
     suspend fun getContracts(
         page: Int? = null,
+        pageSize: Int? = null,
         expired: Boolean? = null,
+        search: String? = null,
+        sortBy: ContractSortField? = null,
+        sortOrder: SortOrder? = null,
     ): Result<GetContractsQuery.Contracts> {
         return try {
             val response = apollo.query(
                 GetContractsQuery(
                     page = Optional.presentIfNotNull(page),
+                    pageSize = Optional.presentIfNotNull(pageSize),
                     expired = Optional.presentIfNotNull(expired),
+                    search = Optional.presentIfNotNull(search),
+                    sortBy = Optional.presentIfNotNull(sortBy),
+                    sortOrder = Optional.presentIfNotNull(sortOrder),
                 )
             ).execute()
             val data = response.data?.contracts ?: error("No data")

@@ -4,15 +4,33 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.antoniszisis.mywallet.data.repository.ContractRepository
 import com.antoniszisis.mywallet.graphql.GetContractsQuery
+import com.antoniszisis.mywallet.graphql.type.ContractSortField
+import com.antoniszisis.mywallet.graphql.type.SortOrder
 import com.antoniszisis.mywallet.util.toInputDate
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 const val CONTRACT_EXPIRING_SOON_DAYS = 30
+private const val PAGE_SIZE = 10
+private const val SEARCH_DEBOUNCE_MS = 300L
+
+/** Mirrors the web app's contract sort options (`CONTRACT_SORT_OPTIONS`). */
+enum class ContractSortOption(
+    val label: String,
+    val sortBy: ContractSortField,
+    val sortOrder: SortOrder,
+) {
+    PROVIDER("Provider (A–Z)", ContractSortField.PROVIDER, SortOrder.ASC),
+    EXPIRY_DATE("Expiry Date", ContractSortField.END_DATE, SortOrder.ASC),
+}
 
 val CONTRACT_CATEGORIES = listOf(
     "Electricity",
@@ -44,11 +62,14 @@ data class ContractFormState(
 data class ContractsUiState(
     val isLoading: Boolean = true,
     val isRefreshing: Boolean = false,
+    val isLoadingMore: Boolean = false,
     val error: String? = null,
-    val currentContracts: List<GetContractsQuery.Item> = emptyList(),
-    val expiredContracts: List<GetContractsQuery.Item> = emptyList(),
-    val expiredTotalCount: Int = 0,
-    val showExpired: Boolean = false,
+    val contracts: List<GetContractsQuery.Item> = emptyList(),
+    val totalCount: Int = 0,
+    val loadedPages: Int = 0,
+    val hasMore: Boolean = false,
+    val searchQuery: String = "",
+    val sortOption: ContractSortOption = ContractSortOption.EXPIRY_DATE,
     val showForm: Boolean = false,
     val form: ContractFormState = ContractFormState(),
     val isSaving: Boolean = false,
@@ -64,43 +85,96 @@ class ContractsViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(ContractsUiState())
     val uiState = _uiState.asStateFlow()
 
+    private val searchQueryFlow = MutableStateFlow("")
+
     init {
-        loadAll()
+        refresh()
+        searchQueryFlow
+            .drop(1)
+            .debounce(SEARCH_DEBOUNCE_MS)
+            .distinctUntilChanged()
+            .onEach { refresh() }
+            .launchIn(viewModelScope)
     }
 
-    fun loadAll() {
+    fun onSearchQueryChange(query: String) {
+        _uiState.value = _uiState.value.copy(searchQuery = query)
+        searchQueryFlow.value = query
+    }
+
+    fun onSortOptionChange(option: ContractSortOption) {
+        if (_uiState.value.sortOption == option) return
+        _uiState.value = _uiState.value.copy(sortOption = option)
+        refresh()
+    }
+
+    fun refresh(silent: Boolean = false) {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-            fetchContracts()
-            _uiState.value = _uiState.value.copy(isLoading = false)
+            val current = _uiState.value
+            _uiState.value = current.copy(
+                isLoading = !silent && current.contracts.isEmpty(),
+                isRefreshing = !silent && current.contracts.isNotEmpty(),
+                error = null,
+            )
+            contractRepository.getContracts(
+                page = 1,
+                pageSize = PAGE_SIZE,
+                search = current.searchQuery.trim().ifBlank { null },
+                sortBy = current.sortOption.sortBy,
+                sortOrder = current.sortOption.sortOrder,
+            ).fold(
+                onSuccess = { data ->
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        isRefreshing = false,
+                        contracts = data.items,
+                        totalCount = data.totalCount,
+                        loadedPages = 1,
+                        hasMore = data.items.size < data.totalCount,
+                    )
+                },
+                onFailure = { e ->
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        isRefreshing = false,
+                        error = e.message ?: "Failed to load contracts",
+                    )
+                }
+            )
         }
     }
 
-    fun refresh() {
+    fun loadMore() {
+        val state = _uiState.value
+        if (state.isLoading || state.isLoadingMore || !state.hasMore) return
+        val nextPage = state.loadedPages + 1
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isRefreshing = true, error = null)
-            fetchContracts()
-            _uiState.value = _uiState.value.copy(isRefreshing = false)
+            _uiState.value = state.copy(isLoadingMore = true)
+            contractRepository.getContracts(
+                page = nextPage,
+                pageSize = PAGE_SIZE,
+                search = state.searchQuery.trim().ifBlank { null },
+                sortBy = state.sortOption.sortBy,
+                sortOrder = state.sortOption.sortOrder,
+            ).fold(
+                onSuccess = { data ->
+                    val merged = _uiState.value.contracts + data.items
+                    _uiState.value = _uiState.value.copy(
+                        isLoadingMore = false,
+                        contracts = merged,
+                        totalCount = data.totalCount,
+                        loadedPages = nextPage,
+                        hasMore = merged.size < data.totalCount,
+                    )
+                },
+                onFailure = { e ->
+                    _uiState.value = _uiState.value.copy(
+                        isLoadingMore = false,
+                        error = e.message ?: "Failed to load more contracts",
+                    )
+                }
+            )
         }
-    }
-
-    private suspend fun fetchContracts() {
-        val currentDeferred = viewModelScope.async { contractRepository.getContracts(page = 1, expired = false) }
-        val expiredDeferred = viewModelScope.async { contractRepository.getContracts(page = 1, expired = true) }
-
-        val currentResult = currentDeferred.await()
-        val expiredResult = expiredDeferred.await()
-
-        _uiState.value = _uiState.value.copy(
-            currentContracts = currentResult.getOrNull()?.items ?: emptyList(),
-            expiredContracts = expiredResult.getOrNull()?.items ?: emptyList(),
-            expiredTotalCount = expiredResult.getOrNull()?.totalCount ?: 0,
-            error = currentResult.exceptionOrNull()?.message,
-        )
-    }
-
-    fun toggleShowExpired() {
-        _uiState.value = _uiState.value.copy(showExpired = !_uiState.value.showExpired)
     }
 
     // Form
@@ -191,7 +265,7 @@ class ContractsViewModel @Inject constructor(
             result.fold(
                 onSuccess = {
                     _uiState.value = _uiState.value.copy(isSaving = false, showForm = false)
-                    loadAll()
+                    refresh()
                 },
                 onFailure = { e ->
                     _uiState.value = _uiState.value.copy(isSaving = false)
@@ -217,7 +291,7 @@ class ContractsViewModel @Inject constructor(
             contractRepository.deleteContract(contract.id).fold(
                 onSuccess = {
                     _uiState.value = _uiState.value.copy(isDeleting = false, contractToDelete = null)
-                    loadAll()
+                    refresh()
                 },
                 onFailure = {
                     _uiState.value = _uiState.value.copy(isDeleting = false)

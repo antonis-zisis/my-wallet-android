@@ -12,7 +12,7 @@ type Query {
   subscriptions(page: Int, pageSize: Int, active: Boolean, sortBy: SubscriptionSortField, sortOrder: SortOrder): SubscriptionsResult!
   netWorthSnapshots(page: Int): NetWorthSnapshotsResult!
   netWorthSnapshot(id: ID!): NetWorthSnapshot
-  contracts(page: Int, expired: Boolean): ContractsResult!
+  contracts(page: Int, pageSize: Int, expired: Boolean, search: String, sortBy: ContractSortField, sortOrder: SortOrder): ContractsResult!
   me: User!
 }
 
@@ -271,6 +271,11 @@ type Contract {
 type ContractsResult {
   items: [Contract!]!
   totalCount: Int!
+}
+
+enum ContractSortField {
+  END_DATE
+  PROVIDER
 }
 
 input CreateContractInput {
